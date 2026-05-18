@@ -57,9 +57,9 @@ TEST_CASE("TB probing") {
 
     int actual_wdl = tb->probe_wdl(board);
     int actual_dtz = tb->probe_dtz(board);
-    std::cout<<fen<<'\n';
-    REQUIRE(expected_wdl==actual_wdl);
-    REQUIRE(expected_dtz==actual_dtz);
+    std::cout << fen << '\n';
+    REQUIRE(expected_wdl == actual_wdl);
+    REQUIRE(expected_dtz == actual_dtz);
   }
 }
 int main(int argc, char **argv) {
