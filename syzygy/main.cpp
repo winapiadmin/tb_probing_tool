@@ -72,7 +72,7 @@ TEST_CASE("TB probing") {
       std::cout << fen << '\n';
       REQUIRE(expected_wdl == actual_wdl);
       REQUIRE(expected_dtz == actual_dtz);
-    } catch (const std::runtime_error& e) {
+    } catch (const std::runtime_error &e) {
       FAIL("Probing failed for FEN \"" << fen << "\": " << e.what());
     }
   }
