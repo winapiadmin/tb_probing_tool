@@ -31,6 +31,7 @@ jobs:
         run: clang-format -i $(git ls-files '*.cpp' '*.hpp' '*.h' '*.c')
 
       - name: Commit and push changes
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         id: auto-commit
         uses: stefanzweifel/git-auto-commit-action@v7
 
@@ -68,9 +69,19 @@ jobs:
         run: |
           mkdir -p ${{ steps.vars.outputs.dir }}
           cd ${{ steps.vars.outputs.dir }}
-          wget --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/ -P tb
-          wget --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/ -P tb
-
+          wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/ -P tb
+          wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/ -P tb
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install Python Pre-check Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install chess
+      - name: Verify TBs
+        run: |
+          py ${{ github.workspace }}/verify_syzygy_tb.py
       - name: Configure CMake
         shell: bash
         run: |

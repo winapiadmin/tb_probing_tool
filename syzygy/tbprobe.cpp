@@ -461,8 +461,7 @@ void Table::init_mmap() {
     madvise(this->data, this->data_size, MADV_RANDOM);
 #endif
 #else
-    std::wstring wpath(this->path.begin(), this->path.end());
-
+    std::wstring wpath = std::filesystem::path(this->path).wstring();
     HANDLE hFile = CreateFileW(
         wpath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS, NULL);
@@ -547,7 +546,9 @@ PairsData Table::setup_pairs(uint32_t data_ptr, uint32_t tb_size, int size_idx,
     throw std::runtime_error("Data not initialized");
 
   PairsData d;
-
+  d.blocksize = 0;
+  d.offset = 0;
+  d.sympat = 0;
   this->_flags = this->data[data_ptr];
   if (this->data[data_ptr] & 0x80) {
     d.idxbits = 0;
@@ -1636,7 +1637,6 @@ void DtzTable::setup_pieces_pawn_dtz(size_t p_data, int p_tb_size, int f) {
 int Tablebase::add_directory(const std::string &directory, bool load_wdl,
                              bool load_dtz) {
   std::filesystem::path abs_path = std::filesystem::absolute(directory);
-  std::cerr << abs_path << '\n';
   int total = 0;
   if (std::filesystem::exists(abs_path) &&
       std::filesystem::is_directory(abs_path)) {
@@ -1748,7 +1748,7 @@ std::pair<int, int> Tablebase::probe_ab(chess::Board &board, int alpha,
   board.legals<chess::MoveGenType::CAPTURE>(legals);
   for (const auto &move : legals /*board.generate_legal_moves(0xffffffffffffffff, board.occupied_co[!board.turn])*/)
         {
-    if (move.typeOf() == chess::MoveType::EN_PASSANT) {
+    if (move.typeOf() == EN_PASSANT) {
       continue;
     }
     board.doMove(move);
@@ -1886,7 +1886,7 @@ int Tablebase::probe_wdl(chess::Board &board) {
   Movelist legals;
   board.legals<chess::MoveGenType::PAWN | chess::MoveGenType::CAPTURE>(legals);
   for (const auto &move : legals) {
-    if (move.typeOf() != chess::MoveType::EN_PASSANT) {
+    if (move.typeOf() != EN_PASSANT) {
       continue;
     }
     board.doMove(move);
@@ -1915,7 +1915,7 @@ int Tablebase::probe_wdl(chess::Board &board) {
       Movelist legals;
       board.legals(legals);
       for (const auto &m : legals) {
-        if (m.type_of() != EN_PASSANT) {
+        if (m.typeOf() != EN_PASSANT) {
           all_ep = false;
           break;
         }
@@ -2154,7 +2154,7 @@ int Tablebase::probe_dtz(chess::Board &board) {
   Movelist moves;
   board.legals(moves);
   for (const auto &move : moves) {
-    if (move.typeOf() != chess::MoveType::EN_PASSANT) {
+    if (move.typeOf() != EN_PASSANT) {
       continue;
     }
     board.doMove(move);
