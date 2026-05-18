@@ -81,7 +81,7 @@ jobs:
           pip install chess
       - name: Verify TBs
         run: |
-          py ${{ github.workspace }}/verify_syzygy_tb.py
+          python ${{ github.workspace }}/verify_syzygy_tb.py
       - name: Configure CMake
         shell: bash
         run: |
