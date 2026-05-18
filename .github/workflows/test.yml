@@ -67,7 +67,7 @@ jobs:
       - name: download syzygy 3-4-5 if needed
         shell: bash
         run: |
-          mkdir -p ${{ steps.vars.outputs.dir }}
+          mkdir -p ${{ steps.vars.outputs.TBPROBE_TESTS_SYZYGY_PATH }}
           cd ${{ steps.vars.outputs.dir }}
           wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/ -P tb
           wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/ -P tb
