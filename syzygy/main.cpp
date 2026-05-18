@@ -36,8 +36,9 @@ TEST_CASE("Static functions") {
 TEST_CASE("TB probing") {
   std::unique_ptr<tbprobe::syzygy::Tablebase> tb =
       tbprobe::syzygy::open_tablebase("tb");
-  if (!tb) return;
-  const char* csv_path_env = std::getenv("TBPROBE_TESTS_SYZYGY_CSV");
+  if (!tb)
+    return;
+  const char *csv_path_env = std::getenv("TBPROBE_TESTS_SYZYGY_CSV");
   const std::string csv_path = csv_path_env ? csv_path_env : "tests.csv";
   std::ifstream f(csv_path);
   REQUIRE(f.is_open());

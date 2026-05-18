@@ -22,8 +22,8 @@
 #include <numeric>
 #include <position.h>
 #include <set>
-#include <variant>
 #include <unordered_set>
+#include <variant>
 #ifndef _WIN32
 #include <fcntl.h>
 #include <sys/mman.h>
