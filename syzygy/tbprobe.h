@@ -20,7 +20,9 @@
 #define TBPROBE_H
 #include <array>
 #include <condition_variable>
+#include <deque>
 #include <fwd_decl.h>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <regex>
@@ -28,8 +30,6 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <deque>
-#include <memory>
 namespace tbprobe::syzygy {
 //clang-format off
 constexpr int TBPIECES = 7;
