@@ -28,6 +28,8 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <deque>
+#include <memory>
 namespace tbprobe::syzygy {
 //clang-format off
 constexpr int TBPIECES = 7;
@@ -259,10 +261,10 @@ public:
 
 class PawnFileData {
 public:
-  std::map<int, PairsData> precomp;
-  std::map<int, std::vector<uint64_t>> factor;
-  std::map<int, std::vector<int>> pieces;
-  std::map<int, std::vector<int>> norm;
+  std::unordered_map<int, PairsData> precomp;
+  std::unordered_map<int, std::vector<uint64_t>> factor;
+  std::unordered_map<int, std::vector<int>> pieces;
+  std::unordered_map<int, std::vector<int>> norm;
 };
 class PawnFileDataDtz {
 public:

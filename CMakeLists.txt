@@ -9,7 +9,7 @@ FetchContent_Declare(
     GIT_TAG main
 )
 FetchContent_MakeAvailable(chesslib)
-add_library(syzygy_probe "src/tbprobe.cpp")
+add_library(syzygy_probe "syzygy/tbprobe.cpp")
 target_include_directories(syzygy_probe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${chesslib_SOURCE_DIR})
 target_link_libraries(syzygy_probe PUBLIC chesslib)
 include(CTest)
@@ -24,7 +24,7 @@ if(BUILD_TESTING)
     FetchContent_MakeAvailable(doctest)
 
     # --- Test executable ---
-    add_executable(tester src/main.cpp)
+    add_executable(tester syzygy/main.cpp)
 
     target_link_libraries(tester PRIVATE syzygy_probe doctest::doctest)
 

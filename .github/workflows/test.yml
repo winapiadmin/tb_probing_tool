@@ -73,7 +73,9 @@ jobs:
       - name: Set build dir
         id: vars
         shell: bash
-        run: echo "dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+          echo "TBPROBE_TESTS_SYZYGY_CSV=${{ github.workspace }}/syzygy/tests.csv" >> $GITHUB_ENV
 
       - name: cache syzygy
         id: cache-syzygy

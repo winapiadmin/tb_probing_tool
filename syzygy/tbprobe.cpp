@@ -22,8 +22,8 @@
 #include <numeric>
 #include <position.h>
 #include <set>
-#include <unordered_map>
 #include <variant>
+#include <unordered_set>
 #ifndef _WIN32
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -37,6 +37,9 @@
 #include <filesystem>
 using namespace chess;
 namespace tbprobe::syzygy {
+namespace {
+std::once_flag syzygy_init_once;
+}
 std::array<std::array<int, 24>, 5> PAWNIDX{{}};
 std::array<std::array<int, 24>, 5> PFACTOR{{}};
 std::array<std::array<int, 10>, 5> MULTIDX{{}};
@@ -448,6 +451,7 @@ void Table::init_mmap() {
     this->data = static_cast<uint8_t *>(map);
 
     if (this->data_size % 64 != 16) {
+      munmap(map, this->data_size);
       throw std::runtime_error("invalid file size: ensure " + this->path +
                                " is a valid syzygy tablebase file");
     }
@@ -1235,20 +1239,27 @@ void WdlTable::setup_pieces_piece(size_t p_data) {
 }
 
 int WdlTable::probe_wdl_table(const chess::Board &board) {
-  {
-    std::lock_guard<std::recursive_mutex> lock(write_lock);
-    read_count++;
-  }
+  struct ReadGuard {
+    std::recursive_mutex &mtx;
+    int &count;
+    std::condition_variable_any &cv;
 
-  int res = _probe_wdl_table(board);
+    ReadGuard(std::recursive_mutex &m, int &c, std::condition_variable_any &v)
+        : mtx(m), count(c), cv(v) {
+      std::lock_guard<std::recursive_mutex> lock(mtx);
+      count++;
+    }
 
-  {
-    std::lock_guard<std::recursive_mutex> lock(write_lock);
-    read_count--;
-    read_condition.notify_all();
-  }
+    ~ReadGuard() {
+      std::lock_guard<std::recursive_mutex> lock(mtx);
+      count--;
+      cv.notify_all();
+    }
+  };
 
-  return res;
+  ReadGuard guard(write_lock, read_count, read_condition);
+
+  return _probe_wdl_table(board);
 }
 
 int WdlTable::_probe_wdl_table(const chess::Board &board) {
@@ -1445,23 +1456,29 @@ void DtzTable::init_table_dtz() {
 
   initialized = true;
 }
-
 std::pair<int, int> DtzTable::probe_dtz_table(const chess::Board &board,
                                               int wdl) {
-  {
-    std::lock_guard<std::recursive_mutex> lock(write_lock);
-    read_count++;
-  }
+  struct ReadGuard {
+    std::recursive_mutex &mtx;
+    int &count;
+    std::condition_variable_any &cv;
 
-  auto res = _probe_dtz_table(board, wdl);
+    ReadGuard(std::recursive_mutex &m, int &c, std::condition_variable_any &v)
+        : mtx(m), count(c), cv(v) {
+      std::lock_guard<std::recursive_mutex> lock(mtx);
+      count++;
+    }
 
-  {
-    std::lock_guard<std::recursive_mutex> lock(write_lock);
-    read_count--;
-    read_condition.notify_all();
-  }
+    ~ReadGuard() {
+      std::lock_guard<std::recursive_mutex> lock(mtx);
+      count--;
+      cv.notify_all();
+    }
+  };
 
-  return res;
+  ReadGuard guard(write_lock, read_count, read_condition);
+
+  return _probe_dtz_table(board, wdl);
 }
 
 std::pair<int, int> DtzTable::_probe_dtz_table(const chess::Board &board,
@@ -1906,7 +1923,7 @@ int Tablebase::probe_wdl(chess::Board &board) {
         Movelist legals;
         board.legals(legals);
         for (const auto &m : legals) {
-          if (m.type_of() == EN_PASSANT) {
+          if (m.type_of() != EN_PASSANT) {
             all_ep = false;
             break;
           }
@@ -2193,7 +2210,7 @@ int Tablebase::probe_dtz(chess::Board &board) {
       bool all_ep = board.enpassantSq() != SQ_NONE;
       if (all_ep)
         for (const auto &m : moves) {
-          if (m.type_of() != EN_PASSANT) {
+          if (m.typeOf() != EN_PASSANT) {
             all_ep = false;
             break;
           }
@@ -2236,18 +2253,18 @@ void Tablebase::_bump_lru(Table *table) {
     last->close();
   }
 }
-
 void Tablebase::close() {
-  /** Closes all loaded tables. */
+  std::unordered_set<Table *> owned;
+
   for (auto &pair : wdl) {
-    if (pair.second)
-      pair.second->close();
+    if (pair.second && owned.insert(pair.second).second)
+      delete pair.second;
   }
   wdl.clear();
 
   for (auto &pair : dtz) {
-    if (pair.second)
-      pair.second->close();
+    if (pair.second && owned.insert(pair.second).second)
+      delete pair.second;
   }
   dtz.clear();
 
@@ -2262,6 +2279,7 @@ std::unique_ptr<Tablebase> open_tablebase(const std::string &directory,
    * :class:`~chess.syzygy.Tablebase`.
    * ...
    */
+  std::call_once(syzygy_init_once, initialize);
   std::unique_ptr<Tablebase> tables = std::make_unique<Tablebase>(max_fds);
   tables->add_directory(directory, load_wdl, load_dtz);
   return tables;
