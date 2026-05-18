@@ -44,10 +44,6 @@ TEST_CASE("TB probing") {
   const std::string tb_path = tb_path_env ? tb_path_env : "tb";
   std::unique_ptr<tbprobe::syzygy::Tablebase> tb =
       tbprobe::syzygy::open_tablebase(tb_path);
-  if (!tb) {
-    WARN("Tablebase directory not available; skipping probing tests");
-    return;
-  }
   const char *csv_path_env = std::getenv("TBPROBE_TESTS_SYZYGY_CSV");
   const std::string csv_path = csv_path_env ? csv_path_env : "tests.csv";
   std::ifstream f(csv_path);

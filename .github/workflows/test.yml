@@ -10,6 +10,8 @@ on:
       - '**/*.hpp'
       - '.github/workflows/**'
       - '**/CMakeLists.txt'
+      - '**/*.py'
+      - '**/*.csv'
 jobs:
   format:
     if: github.actor != 'github-actions[bot]'
