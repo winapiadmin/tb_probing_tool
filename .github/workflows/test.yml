@@ -59,14 +59,6 @@ jobs:
           echo "dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
           echo "TBPROBE_TESTS_SYZYGY_CSV=${{ github.workspace }}/syzygy/tests.csv" >> $GITHUB_ENV
 
-      - name: cache syzygy
-        id: cache-syzygy
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-           path: |
-              ${{ steps.vars.outputs.dir }}/3-4-5-wdl/
-              ${{ steps.vars.outputs.dir }}/3-4-5-dtz/
-           key: key-syzygy
       - name: install wget
         if: matrix.os == 'windows-latest'
         run: choco install wget -y
@@ -76,8 +68,8 @@ jobs:
         run: |
           mkdir -p ${{ steps.vars.outputs.dir }}
           cd ${{ steps.vars.outputs.dir }}
-          wget --no-verbose -r -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/
-          wget --no-verbose -r -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/
+          wget --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/ -P tb
+          wget --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/ -P tb
 
       - name: Configure CMake
         shell: bash
