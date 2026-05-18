@@ -1,0 +1,125 @@
+name: test
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - '**.c'
+      - '**.cpp'
+      - '**.h'
+      - '**.hpp'
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      commit_sha: ${{ steps.auto-commit.outputs.commit_hash }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: Run clang-format
+        run: clang-format -i $(git ls-files '*.cpp' '*.hpp' '*.h' '*.c')
+
+      - name: Commit and push changes
+        id: auto-commit
+        uses: stefanzweifel/git-auto-commit-action@v7
+
+  build:
+    needs: format
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Debug, Release]
+        c_compiler: [gcc, clang, cl]
+
+        include:
+          # Windows
+          - os: windows-latest
+            c_compiler: cl
+            cpp_compiler: cl
+          - os: windows-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+          - os: windows-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+
+          # Linux
+          - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+          - os: ubuntu-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+
+        exclude:
+          - os: ubuntu-latest
+            c_compiler: cl
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set build dir
+        id: vars
+        shell: bash
+        run: echo "dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+      - name: cache syzygy
+        id: cache-syzygy
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+           path: |
+              ${{ steps.vars.outputs.dir }}/3-4-5-wdl/
+              ${{ steps.vars.outputs.dir }}/3-4-5-dtz/
+           key: key-syzygy
+
+      - name: download syzygy 3-4-5 if needed
+        shell: bash
+        if: steps.cache-syzygy.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ${{ steps.vars.outputs.dir }}
+          cd ${{ steps.vars.outputs.dir }}
+          wget --no-verbose -r -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/
+          wget --no-verbose -r -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/
+
+      - name: Configure CMake
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            if [[ "${{ matrix.cpp_compiler }}" == "clang++" ]]; then
+              SANITIZERS="memory,undefined"
+            else
+              SANITIZERS="address,undefined"
+            fi
+          fi
+          cmake -B "${{ steps.vars.outputs.dir }}" \
+                -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+                -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+                -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+                -DSANITIZERS=${SANITIZERS} \
+                -S "${{ github.workspace }}"
+
+      - name: Build
+        run: cmake --build ${{ steps.vars.outputs.dir }} --config ${{ matrix.build_type }}
+
+      - name: Test  
+        working-directory: ${{ steps.vars.outputs.dir }}
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            ctest --build-config ${{ matrix.build_type }} --verbose -j 4
+          else
+            ctest --verbose -j 4
+          fi
+

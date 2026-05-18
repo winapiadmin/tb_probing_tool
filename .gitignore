@@ -12,7 +12,7 @@ cmake-build-*
 !.gitattributes
 !.github/**
 !.github/
-**/
+!syzygy/
 # Ignore build/editor junk
 build/
 out/
