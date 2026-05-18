@@ -58,7 +58,7 @@ jobs:
         run: |
           echo "dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
           echo "TBPROBE_TESTS_SYZYGY_CSV=${{ github.workspace }}/syzygy/tests.csv" >> $GITHUB_ENV
-          echo "TBPROBE_TESTS_SYZYGY_PATH=${{ steps.vars.outputs.dir }}/tb" >> $GITHUB_ENV
+          echo "TBPROBE_TESTS_SYZYGY_PATH=${{ github.workspace }}/build/tb" >> $GITHUB_ENV
 
       - name: install wget
         if: matrix.os == 'windows-latest'
