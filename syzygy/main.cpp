@@ -40,10 +40,12 @@ TEST_CASE("Static functions") {
   REQUIRE(tbprobe::syzygy::tablenames(true, 8).size() == 4031);
 }
 TEST_CASE("TB probing") {
+  const char *tb_path_env = std::getenv("TBPROBE_TESTS_SYZYGY_PATH");
+  const std::string tb_path = tb_path_env ? tb_path_env : "tb";
   std::unique_ptr<tbprobe::syzygy::Tablebase> tb =
-      tbprobe::syzygy::open_tablebase("tb");
+      tbprobe::syzygy::open_tablebase(tb_path);
   if (!tb) {
-    WARN("Tablebase directory 'tb' not available; skipping probing tests");
+    WARN("Tablebase directory " + tb_path + " not available; skipping probing tests");
     return;
   }
   const char *csv_path_env = std::getenv("TBPROBE_TESTS_SYZYGY_CSV");

@@ -58,6 +58,7 @@ jobs:
         run: |
           echo "dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
           echo "TBPROBE_TESTS_SYZYGY_CSV=${{ github.workspace }}/syzygy/tests.csv" >> $GITHUB_ENV
+          echo "TBPROBE_TESTS_SYZYGY_PATH=${{ steps.vars.outputs.dir }}/tb" >> $GITHUB_ENV
 
       - name: install wget
         if: matrix.os == 'windows-latest'
@@ -69,12 +70,10 @@ jobs:
           cd ${{ steps.vars.outputs.dir }}
           wget --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/ -P tb
           wget --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/ -P tb
-          ls tb
 
       - name: Configure CMake
         shell: bash
         run: |
-          ls tb
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
             if [[ "${{ matrix.cpp_compiler }}" == "clang++" ]]; then
               SANITIZERS="memory,undefined"
