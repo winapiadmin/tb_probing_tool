@@ -22,8 +22,8 @@
 #include <numeric>
 #include <position.h>
 #include <set>
-#include <variant>
 #include <unordered_set>
+#include <variant>
 #ifndef _WIN32
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -1909,24 +1909,13 @@ int Tablebase::probe_wdl(chess::Board &board) {
     } else if (v == 0) {
       // If there is not at least one legal non-en-passant move we are
       // forced to play the losing en passant capture.
-      /*auto legal_moves = board.generate_legal_moves();
       bool all_ep = true;
-      for (const auto& m : legal_moves) {
-          if (!board.is_en_passant(m)) {
-              all_ep = false;
-              break;
-          }
-      }*/
-      // Optimized:
-      bool all_ep = board.enpassantSq() != SQ_NONE;
-      if (all_ep) {
-        Movelist legals;
-        board.legals(legals);
-        for (const auto &m : legals) {
-          if (m.type_of() != EN_PASSANT) {
-            all_ep = false;
-            break;
-          }
+      Movelist legals;
+      board.legals(legals);
+      for (const auto &m : legals) {
+        if (m.type_of() != EN_PASSANT) {
+          all_ep = false;
+          break;
         }
       }
       if (all_ep) {

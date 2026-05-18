@@ -18,6 +18,12 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #define DOCTEST_CONFIG_NO_EXCEPTIONS_BUT_WITH_ALL_ASSERTS
 #include "tbprobe.h"
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <regex>
+#include <sstream>
+#include <string>
 #include <doctest/doctest.h>
 #include <position.h>
 TEST_CASE("Static functions") {
