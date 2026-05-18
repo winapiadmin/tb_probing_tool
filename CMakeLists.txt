@@ -3,12 +3,19 @@ project(tb_probing_tool)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED 17)
 include(FetchContent)
+
 FetchContent_Declare(
     chesslib
     GIT_REPOSITORY https://github.com/winapiadmin/chesslib.git
     GIT_TAG main
 )
+set(_OLD_BUILD_TESTING ${BUILD_TESTING})
+
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(chesslib)
+
+set(BUILD_TESTING ${_OLD_BUILD_TESTING} CACHE BOOL "" FORCE)
+
 add_library(syzygy_probe "syzygy/tbprobe.cpp")
 target_include_directories(syzygy_probe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${chesslib_SOURCE_DIR})
 target_link_libraries(syzygy_probe PUBLIC chesslib)
