@@ -93,6 +93,7 @@ jobs:
                 -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
                 -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
                 -DSANITIZERS=${SANITIZERS} \
+                -DBUILD_TESTING=TRUE \
                 -S "${{ github.workspace }}"
 
       - name: Build
