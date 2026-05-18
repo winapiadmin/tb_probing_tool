@@ -415,9 +415,12 @@ private:
     T *table = new T(path);
 
     if (hashtable.find(table->key) != hashtable.end()) {
-      hashtable[table->key]->close();
-      delete hashtable[table->key];
-      hashtable.erase(table->key);
+      Table *old_table = hashtable[table->key];
+      // Erase both entries before deleting (handles asymmetric keys)
+      hashtable.erase(old_table->key);
+      hashtable.erase(old_table->mirrored_key);
+      old_table->close();
+      delete old_table;
     }
 
     hashtable[table->key] = table;
