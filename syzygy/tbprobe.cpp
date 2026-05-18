@@ -24,6 +24,7 @@
 #include <set>
 #include <unordered_set>
 #include <variant>
+#include <iostream>
 #ifndef _WIN32
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -1635,6 +1636,7 @@ void DtzTable::setup_pieces_pawn_dtz(size_t p_data, int p_tb_size, int f) {
 int Tablebase::add_directory(const std::string &directory, bool load_wdl,
                              bool load_dtz) {
   std::filesystem::path abs_path = std::filesystem::absolute(directory);
+  std::cerr<<abs_path<<'\n';
   int total = 0;
   if (std::filesystem::exists(abs_path) &&
       std::filesystem::is_directory(abs_path)) {

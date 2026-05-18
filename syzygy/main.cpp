@@ -68,15 +68,15 @@ TEST_CASE("TB probing") {
 
     int expected_wdl = std::stoi(wdl_s);
     int expected_dtz = std::stoi(dtz_s);
+    int actual_wdl,actual_dtz;
     try {
-      int actual_wdl = tb->probe_wdl(board);
-      int actual_dtz = tb->probe_dtz(board);
-      std::cout << fen << '\n';
-      REQUIRE(expected_wdl == actual_wdl);
-      REQUIRE(expected_dtz == actual_dtz);
+      actual_wdl = tb->probe_wdl(board);
+      actual_dtz = tb->probe_dtz(board);
     } catch (const std::runtime_error &e) {
       FAIL("Probing failed for FEN \"" << fen << "\": " << e.what());
     }
+    REQUIRE(expected_wdl == actual_wdl);
+    REQUIRE(expected_dtz == actual_dtz);
   }
 }
 int main(int argc, char **argv) {
