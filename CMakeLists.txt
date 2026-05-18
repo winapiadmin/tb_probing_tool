@@ -9,13 +9,17 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/winapiadmin/chesslib.git
     GIT_TAG main
 )
-set(_OLD_BUILD_TESTING ${BUILD_TESTING})
-
+if(DEFINED BUILD_TESTING)
+    set(_OLD_BUILD_TESTING "${BUILD_TESTING}")
+    set(_HAD_BUILD_TESTING TRUE)
+endif()
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(chesslib)
-
-set(BUILD_TESTING ${_OLD_BUILD_TESTING} CACHE BOOL "" FORCE)
-
+if(_HAD_BUILD_TESTING)
+    set(BUILD_TESTING "${_OLD_BUILD_TESTING}" CACHE BOOL "" FORCE)
+else()
+    unset(BUILD_TESTING CACHE)
+endif()
 add_library(syzygy_probe "syzygy/tbprobe.cpp")
 target_include_directories(syzygy_probe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${chesslib_SOURCE_DIR})
 target_link_libraries(syzygy_probe PUBLIC chesslib)
