@@ -67,10 +67,24 @@ jobs:
       - name: download syzygy 3-4-5 if needed
         shell: bash
         run: |
-          mkdir -p $TBPROBE_TESTS_SYZYGY_PATH
-          cd ${{ steps.vars.outputs.dir }}
-          wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/ -P tb
-          wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused --no-verbose -r -nd -nH --cut-dirs=2 --no-parent --reject="index.html*" -e robots=off https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/ -P tb
+          TB_PATH="${{ steps.output.vars.TBPROBE_TESTS_SYZYGY_PATH }}/tb"
+
+          # Convert Windows path to POSIX when running on Windows
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            TB_PATH="$(cygpath -u "$TB_PATH")"
+          fi
+
+          wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused \
+            --no-verbose -r -nd -nH --cut-dirs=2 --no-parent \
+            --reject="index.html*" -e robots=off \
+            https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/ \
+            -P "$TB_PATH"
+
+          wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused \
+            --no-verbose -r -nd -nH --cut-dirs=2 --no-parent \
+            --reject="index.html*" -e robots=off \
+            https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/ \
+            -P "$TB_PATH"
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
