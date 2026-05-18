@@ -67,7 +67,7 @@ jobs:
       - name: download syzygy 3-4-5 if needed
         shell: bash
         run: |
-          TB_PATH="${{ steps.vars.outputs.dir }}/build/tb"
+          TB_PATH="${{ steps.vars.outputs.dir }}/tb"
 
           # Convert Windows path to POSIX when running on Windows
           if [[ "$RUNNER_OS" == "Windows" ]]; then
