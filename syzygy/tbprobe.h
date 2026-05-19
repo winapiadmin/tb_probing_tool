@@ -314,10 +314,10 @@ public:
   void set_norm_pawn(std::vector<int> &norm, const std::vector<int> &pieces);
   void calc_symlen(PairsData &d, int s, std::vector<int> &tmp);
   chess::File pawn_file(std::vector<chess::Square> &pos);
-  uint64_t encode_piece(std::vector<int> &norm, std::vector<chess::Square> pos,
-                        std::vector<uint64_t> &factor);
-  uint64_t encode_pawn(std::vector<int> &norm, std::vector<chess::Square> pos,
-                       std::vector<uint64_t> &factor);
+  uint64_t encode_piece(const std::vector<int> &norm, std::vector<chess::Square> pos,
+                        const std::vector<uint64_t> &factor);
+  uint64_t encode_pawn(const std::vector<int> &norm, std::vector<chess::Square> pos,
+                       const std::vector<uint64_t> &factor);
   int decompress_pairs(PairsData &d, uint64_t idx);
   uint64_t read_uint64_be(uint32_t data_ptr);
   uint32_t read_uint32(uint32_t data_ptr);

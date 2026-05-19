@@ -112,14 +112,15 @@ std::string normalize_tablename(const std::string &name, bool mirror) {
   });
 
   std::vector<int> b_indices;
-  for (char c : b) {
-    b_indices.push_back(index_in_PCHR(c));
-  }
-  std::vector<int> w_indices;
-  for (char c : w) {
-    w_indices.push_back(index_in_PCHR(c));
-  }
+b_indices.reserve(b.size());
 
+std::transform(b.begin(), b.end(), std::back_inserter(b_indices),
+               [&](char c) { return index_in_PCHR(c); });
+std::vector<int> w_indices;
+w_indices.reserve(w.size());
+
+std::transform(w.begin(), w.end(), std::back_inserter(w_indices),
+               [&](char c) { return index_in_PCHR(c); });
   bool condition = (std::make_pair(w.size(), b_indices) <
                     std::make_pair(b.size(), w_indices));
   if (mirror ^ condition) {
@@ -205,10 +206,10 @@ all_dependencies(const std::vector<std::string> &targets, bool one_king) {
   }
 
   std::vector<std::string> open_list;
-  for (const auto &target : targets) {
-    open_list.push_back(normalize_tablename(target));
-  }
-
+std::transform(targets.begin(), targets.end(),
+               std::back_inserter(open_list),
+               [](const std::string& k) { return normalize_tablename(k); }
+               );
   std::vector<std::string> result;
   while (!open_list.empty()) {
     std::string name = open_list.back();
@@ -408,7 +409,7 @@ Table::Table(std::string path) : path(path) {
       this->enc_type = 0;
     } else if (j == 2) {
       this->enc_type = 2;
-    } else { // only for suicide
+    }/* else { // only for suicide
       j = 16;
       for (int _repeat = 0; _repeat < 16; ++_repeat) {
         for (char piece_type : PCHR) {
@@ -429,7 +430,7 @@ Table::Table(std::string path) : path(path) {
           this->enc_type = 1 + j;
         }
       }
-    }
+    }*/
   }
 }
 
@@ -552,6 +553,9 @@ PairsData Table::setup_pairs(uint32_t data_ptr, uint32_t tb_size, int size_idx,
   this->_flags = this->data[data_ptr];
   if (this->data[data_ptr] & 0x80) {
     d.idxbits = 0;
+    d.indextable = 0;
+    d.sizetable = 0;
+    d.data = 0;
     if (wdl) {
       d.min_len = this->data[data_ptr + 1];
     } else {
@@ -646,7 +650,7 @@ uint64_t Table::calc_factors_piece(std::vector<uint64_t> &factor, int order,
   while (i < this->num || k == order) {
     if (k == order) {
       factor[0] = f;
-      if (this->enc_type < 4) {
+      if (/*this->enc_type < 4*/ true) { // no suicide
         f *= PIVFAC[this->enc_type];
       } else {
         f *= MFACTOR[this->enc_type - 2];
@@ -744,8 +748,8 @@ File Table::pawn_file(std::vector<Square> &pos) {
   return static_cast<File>(FILE_TO_FILE[pos[0] & 0x07]);
 }
 
-uint64_t Table::encode_piece(std::vector<int> &norm, std::vector<Square> pos,
-                             std::vector<uint64_t> &factor) {
+uint64_t Table::encode_piece(const std::vector<int> &norm, std::vector<Square> pos,
+                             const std::vector<uint64_t> &factor) {
   int n = this->num;
 
   if (this->enc_type < 3) {
@@ -758,11 +762,7 @@ uint64_t Table::encode_piece(std::vector<int> &norm, std::vector<Square> pos,
         pos[i] = static_cast<Square>(pos[i] ^ 0x38);
     }
 
-    int i = 0;
-    for (i = 0; i < n; ++i) {
-      if (offdiag(pos[i]))
-        break;
-    }
+    int i = std::find_if(pos.begin(), pos.end(), offdiag) - pos.begin();
     if (i < (this->enc_type == 0 ? 3 : 2) && offdiag(pos[i]) > 0) {
       for (int k = 0; k < n; ++k)
         pos[k] = flipdiag(pos[k]);
@@ -861,21 +861,12 @@ uint64_t Table::encode_piece(std::vector<int> &norm, std::vector<Square> pos,
 
   while (i < n) {
     int t = norm[i];
-    for (int j = i; j < i + t; ++j) {
-      for (int k = j + 1; k < i + t; ++k) {
-        if (pos[j] > pos[k])
-          std::swap(pos[j], pos[k]);
-      }
-    }
+    std::sort(pos.begin()+i, pos.begin()+i+t);
 
     uint64_t s = 0;
     for (int m = i; m < i + t; ++m) {
       Square p = pos[m];
-      int j_count = 0;
-      for (int l = 0; l < i; ++l) {
-        if (p > pos[l])
-          j_count++;
-      }
+      int j_count = std::count_if(pos.begin(), pos.begin() + i, [p](int i){return p> i;});
       s += binom(p - j_count, m - i + 1);
     }
 
@@ -886,22 +877,18 @@ uint64_t Table::encode_piece(std::vector<int> &norm, std::vector<Square> pos,
   return idx;
 }
 
-uint64_t Table::encode_pawn(std::vector<int> &norm, std::vector<Square> pos,
-                            std::vector<uint64_t> &factor) {
+uint64_t Table::encode_pawn(const std::vector<int> &norm, std::vector<Square> pos,
+                            const std::vector<uint64_t> &factor) {
   int n = this->num;
 
   if (pos[0] & 0x04) {
     for (int i = 0; i < n; ++i)
       pos[i] = static_cast<Square>(pos[i] ^ 0x07);
   }
-
-  for (int i = 1; i < this->pawns[0]; ++i) {
-    for (int j = i + 1; j < this->pawns[0]; ++j) {
-      if (PTWIST[pos[i]] < PTWIST[pos[j]])
-        std::swap(pos[i], pos[j]);
-    }
-  }
-
+  std::sort(pos.begin() + 1, pos.begin() + this->pawns[0],
+          [&](int a, int b) {
+              return PTWIST[a] > PTWIST[b];
+          });
   int t_val = this->pawns[0] - 1;
   uint64_t idx = PAWNIDX[t_val][FLAP[pos[0]]];
   for (int i = t_val; i > 0; --i) {
@@ -913,20 +900,11 @@ uint64_t Table::encode_pawn(std::vector<int> &norm, std::vector<Square> pos,
   int i = this->pawns[0];
   int t = i + this->pawns[1];
   if (t > i) {
-    for (int j = i; j < t; ++j) {
-      for (int k = j + 1; k < t; ++k) {
-        if (pos[j] > pos[k])
-          std::swap(pos[j], pos[k]);
-      }
-    }
+    std::sort(pos.begin() + i, pos.begin() + t);
     uint64_t s = 0;
     for (int m = i; m < t; ++m) {
       Square p = pos[m];
-      int j_count = 0;
-      for (int k = 0; k < i; ++k) {
-        if (p > pos[k])
-          j_count++;
-      }
+      int j_count = std::count_if(pos.begin(), pos.begin()+i, [p](int v){ return p > v; });
       s += binom(p - j_count - 8, m - i + 1);
     }
     idx += s * factor[i];
@@ -935,21 +913,11 @@ uint64_t Table::encode_pawn(std::vector<int> &norm, std::vector<Square> pos,
 
   while (i < n) {
     int t_sub = norm[i];
-    for (int j = i; j < i + t_sub; ++j) {
-      for (int k = j + 1; k < i + t_sub; ++k) {
-        if (pos[j] > pos[k])
-          std::swap(pos[j], pos[k]);
-      }
-    }
-
+    std::sort(pos.begin() + i, pos.begin() + i + t_sub);
     uint64_t s = 0;
     for (int m = i; m < i + t_sub; ++m) {
       Square p = pos[m];
-      int j_count = 0;
-      for (int k = 0; k < i; ++k) {
-        if (p > pos[k])
-          j_count++;
-      }
+      int j_count = std::count_if(pos.begin(), pos.begin()+i, [p](int v){ return p > v; });
       s += binom(p - j_count, m - i + 1);
     }
 
@@ -1397,7 +1365,7 @@ void DtzTable::init_table_dtz() {
 
     p_data = (p_data + 0x3f) & ~0x3f;
     precomp.data = p_data;
-    p_data += size[2];
+    //p_data += size[2];
 
     key = recalc_key(pieces);
     mirrored_key = recalc_key(pieces, true);
@@ -1657,18 +1625,20 @@ int Tablebase::add_file(const std::string &path, bool load_wdl, bool load_dtz) {
     if (load_wdl) {
       if (ext == /*this->variant.tbw_suffix*/ ".rtbw") {
         return _open_table<WdlTable>(this->wdl, path);
-      } else if (tablename.find('P') == std::string::npos &&
-                 ext == /*this->variant.pawnless_tbw_suffix*/ ".rtbw") {
-        return _open_table<WdlTable>(this->wdl, path);
       }
+      //else if (tablename.find('P') == std::string::npos &&
+      //           ext == /*this->variant.pawnless_tbw_suffix*/ ".rtbw") {
+      //  return _open_table<WdlTable>(this->wdl, path);
+      //}
     }
     if (load_dtz) {
       if (ext == /*this->variant.tbz_suffix*/ ".rtbz") {
         return _open_table<DtzTable>(this->dtz, path);
-      } else if (tablename.find('P') == std::string::npos &&
-                 ext == /*this->variant.pawnless_tbz_suffix*/ ".rtbz") {
-        return _open_table<DtzTable>(this->dtz, path);
       }
+      //else if (tablename.find('P') == std::string::npos &&
+      //           ext == /*this->variant.pawnless_tbz_suffix*/ ".rtbz") {
+      //  return _open_table<DtzTable>(this->dtz, path);
+      //}
     }
   }
   return 0;
@@ -1783,10 +1753,9 @@ std::pair<int, int> Tablebase::sprobe_ab(chess::Board &board, int alpha,
                                          int beta, bool threats) {
   if (popcount(board.occ(~board.sideToMove())) > 1) {
     auto res = this->sprobe_capts(board, alpha, beta);
-    int v = res.first;
     bool captures_found = static_cast<bool>(res.second);
     if (captures_found) {
-      return {v, 2};
+      return {res.first, 2};
     }
   } else {
     Movelist moves;
@@ -1912,14 +1881,9 @@ int Tablebase::probe_wdl(chess::Board &board) {
       // If there is not at least one legal non-en-passant move we are
       // forced to play the losing en passant capture.
       bool all_ep = true;
-      Movelist legals;
-      board.legals(legals);
-      for (const auto &m : legals) {
-        if (m.typeOf() != EN_PASSANT) {
-          all_ep = false;
-          break;
-        }
-      }
+      Movelist legals2;
+      board.legals(legals2);
+      all_ep=std::all_of(legals2.begin(), legals2.end(), [](const Move &move){ return move.typeOf() == EN_PASSANT; });
       if (all_ep) {
         v = v1;
       }
@@ -1996,10 +1960,10 @@ int Tablebase::probe_dtz_no_ep(chess::Board &board) {
   }
 
   auto res_dtz = this->probe_dtz_table(board, wdl_val);
-  int dtz_val = res_dtz.first;
   int dtz_success = res_dtz.second;
 
   if (dtz_success >= 0) {
+    int dtz_val = res_dtz.first;
     return dtz_before_zeroing(wdl_val) + (wdl_val > 0 ? dtz_val : -dtz_val);
   }
 
@@ -2188,8 +2152,8 @@ int Tablebase::probe_dtz(chess::Board &board) {
     } else if (v1 >= 0) {
       v = v1;
     } else {
-      Movelist moves;
-      board.legals(moves);
+      Movelist moves2;
+      board.legals(moves2);
       /*bool all_ep = true;
       for (const auto& m : moves) {
           if (m.type_of() != EN_PASSANT) {
@@ -2198,14 +2162,7 @@ int Tablebase::probe_dtz(chess::Board &board) {
           }
       }*/
       // micro-optimized:
-      bool all_ep = board.enpassantSq() != SQ_NONE;
-      if (all_ep)
-        for (const auto &m : moves) {
-          if (m.typeOf() != EN_PASSANT) {
-            all_ep = false;
-            break;
-          }
-        }
+      bool all_ep = std::all_of(moves2.begin(), moves2.end(), [](const Move& move){ return move.typeOf() == EN_PASSANT; });
       if (all_ep) {
         v = v1;
       }
