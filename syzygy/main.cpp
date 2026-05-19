@@ -70,6 +70,7 @@ TEST_CASE("TB probing") {
       actual_dtz = tb->probe_dtz(board);
     } catch (const std::runtime_error &e) {
       FAIL("Probing failed for FEN \"" << fen << "\": " << e.what());
+      return;
     }
     REQUIRE(expected_wdl == actual_wdl);
     REQUIRE(expected_dtz == actual_dtz);
