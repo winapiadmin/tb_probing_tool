@@ -112,15 +112,15 @@ std::string normalize_tablename(const std::string &name, bool mirror) {
   });
 
   std::vector<int> b_indices;
-b_indices.reserve(b.size());
+  b_indices.reserve(b.size());
 
-std::transform(b.begin(), b.end(), std::back_inserter(b_indices),
-               [&](char c) { return index_in_PCHR(c); });
-std::vector<int> w_indices;
-w_indices.reserve(w.size());
+  std::transform(b.begin(), b.end(), std::back_inserter(b_indices),
+                 [&](char c) { return index_in_PCHR(c); });
+  std::vector<int> w_indices;
+  w_indices.reserve(w.size());
 
-std::transform(w.begin(), w.end(), std::back_inserter(w_indices),
-               [&](char c) { return index_in_PCHR(c); });
+  std::transform(w.begin(), w.end(), std::back_inserter(w_indices),
+                 [&](char c) { return index_in_PCHR(c); });
   bool condition = (std::make_pair(w.size(), b_indices) <
                     std::make_pair(b.size(), w_indices));
   if (mirror ^ condition) {
@@ -206,10 +206,8 @@ all_dependencies(const std::vector<std::string> &targets, bool one_king) {
   }
 
   std::vector<std::string> open_list;
-std::transform(targets.begin(), targets.end(),
-               std::back_inserter(open_list),
-               [](const std::string& k) { return normalize_tablename(k); }
-               );
+  std::transform(targets.begin(), targets.end(), std::back_inserter(open_list),
+                 [](const std::string &k) { return normalize_tablename(k); });
   std::vector<std::string> result;
   while (!open_list.empty()) {
     std::string name = open_list.back();
@@ -409,28 +407,28 @@ Table::Table(std::string path) : path(path) {
       this->enc_type = 0;
     } else if (j == 2) {
       this->enc_type = 2;
-    }/* else { // only for suicide
-      j = 16;
-      for (int _repeat = 0; _repeat < 16; ++_repeat) {
-        for (char piece_type : PCHR) {
-          int b_count = 0;
-          for (char c : black_part)
-            if (c == piece_type)
-              b_count++;
-          if (b_count > 1 && b_count < j)
-            j = b_count;
+    } /* else { // only for suicide
+       j = 16;
+       for (int _repeat = 0; _repeat < 16; ++_repeat) {
+         for (char piece_type : PCHR) {
+           int b_count = 0;
+           for (char c : black_part)
+             if (c == piece_type)
+               b_count++;
+           if (b_count > 1 && b_count < j)
+             j = b_count;
 
-          int w_count = 0;
-          for (char c : white_part)
-            if (c == piece_type)
-              w_count++;
-          if (w_count > 1 && w_count < j)
-            j = w_count;
+           int w_count = 0;
+           for (char c : white_part)
+             if (c == piece_type)
+               w_count++;
+           if (w_count > 1 && w_count < j)
+             j = w_count;
 
-          this->enc_type = 1 + j;
-        }
-      }
-    }*/
+           this->enc_type = 1 + j;
+         }
+       }
+     }*/
   }
 }
 
@@ -748,7 +746,8 @@ File Table::pawn_file(std::vector<Square> &pos) {
   return static_cast<File>(FILE_TO_FILE[pos[0] & 0x07]);
 }
 
-uint64_t Table::encode_piece(const std::vector<int> &norm, std::vector<Square> pos,
+uint64_t Table::encode_piece(const std::vector<int> &norm,
+                             std::vector<Square> pos,
                              const std::vector<uint64_t> &factor) {
   int n = this->num;
 
@@ -861,12 +860,13 @@ uint64_t Table::encode_piece(const std::vector<int> &norm, std::vector<Square> p
 
   while (i < n) {
     int t = norm[i];
-    std::sort(pos.begin()+i, pos.begin()+i+t);
+    std::sort(pos.begin() + i, pos.begin() + i + t);
 
     uint64_t s = 0;
     for (int m = i; m < i + t; ++m) {
       Square p = pos[m];
-      int j_count = std::count_if(pos.begin(), pos.begin() + i, [p](int i){return p> i;});
+      int j_count = std::count_if(pos.begin(), pos.begin() + i,
+                                  [p](int i) { return p > i; });
       s += binom(p - j_count, m - i + 1);
     }
 
@@ -877,7 +877,8 @@ uint64_t Table::encode_piece(const std::vector<int> &norm, std::vector<Square> p
   return idx;
 }
 
-uint64_t Table::encode_pawn(const std::vector<int> &norm, std::vector<Square> pos,
+uint64_t Table::encode_pawn(const std::vector<int> &norm,
+                            std::vector<Square> pos,
                             const std::vector<uint64_t> &factor) {
   int n = this->num;
 
@@ -886,9 +887,7 @@ uint64_t Table::encode_pawn(const std::vector<int> &norm, std::vector<Square> po
       pos[i] = static_cast<Square>(pos[i] ^ 0x07);
   }
   std::sort(pos.begin() + 1, pos.begin() + this->pawns[0],
-          [&](int a, int b) {
-              return PTWIST[a] > PTWIST[b];
-          });
+            [&](int a, int b) { return PTWIST[a] > PTWIST[b]; });
   int t_val = this->pawns[0] - 1;
   uint64_t idx = PAWNIDX[t_val][FLAP[pos[0]]];
   for (int i = t_val; i > 0; --i) {
@@ -904,7 +903,8 @@ uint64_t Table::encode_pawn(const std::vector<int> &norm, std::vector<Square> po
     uint64_t s = 0;
     for (int m = i; m < t; ++m) {
       Square p = pos[m];
-      int j_count = std::count_if(pos.begin(), pos.begin()+i, [p](int v){ return p > v; });
+      int j_count = std::count_if(pos.begin(), pos.begin() + i,
+                                  [p](int v) { return p > v; });
       s += binom(p - j_count - 8, m - i + 1);
     }
     idx += s * factor[i];
@@ -917,7 +917,8 @@ uint64_t Table::encode_pawn(const std::vector<int> &norm, std::vector<Square> po
     uint64_t s = 0;
     for (int m = i; m < i + t_sub; ++m) {
       Square p = pos[m];
-      int j_count = std::count_if(pos.begin(), pos.begin()+i, [p](int v){ return p > v; });
+      int j_count = std::count_if(pos.begin(), pos.begin() + i,
+                                  [p](int v) { return p > v; });
       s += binom(p - j_count, m - i + 1);
     }
 
@@ -1365,7 +1366,7 @@ void DtzTable::init_table_dtz() {
 
     p_data = (p_data + 0x3f) & ~0x3f;
     precomp.data = p_data;
-    //p_data += size[2];
+    // p_data += size[2];
 
     key = recalc_key(pieces);
     mirrored_key = recalc_key(pieces, true);
@@ -1626,19 +1627,19 @@ int Tablebase::add_file(const std::string &path, bool load_wdl, bool load_dtz) {
       if (ext == /*this->variant.tbw_suffix*/ ".rtbw") {
         return _open_table<WdlTable>(this->wdl, path);
       }
-      //else if (tablename.find('P') == std::string::npos &&
-      //           ext == /*this->variant.pawnless_tbw_suffix*/ ".rtbw") {
-      //  return _open_table<WdlTable>(this->wdl, path);
-      //}
+      // else if (tablename.find('P') == std::string::npos &&
+      //            ext == /*this->variant.pawnless_tbw_suffix*/ ".rtbw") {
+      //   return _open_table<WdlTable>(this->wdl, path);
+      // }
     }
     if (load_dtz) {
       if (ext == /*this->variant.tbz_suffix*/ ".rtbz") {
         return _open_table<DtzTable>(this->dtz, path);
       }
-      //else if (tablename.find('P') == std::string::npos &&
-      //           ext == /*this->variant.pawnless_tbz_suffix*/ ".rtbz") {
-      //  return _open_table<DtzTable>(this->dtz, path);
-      //}
+      // else if (tablename.find('P') == std::string::npos &&
+      //            ext == /*this->variant.pawnless_tbz_suffix*/ ".rtbz") {
+      //   return _open_table<DtzTable>(this->dtz, path);
+      // }
     }
   }
   return 0;
@@ -1883,7 +1884,10 @@ int Tablebase::probe_wdl(chess::Board &board) {
       bool all_ep = true;
       Movelist legals2;
       board.legals(legals2);
-      all_ep=std::all_of(legals2.begin(), legals2.end(), [](const Move &move){ return move.typeOf() == EN_PASSANT; });
+      all_ep =
+          std::all_of(legals2.begin(), legals2.end(), [](const Move &move) {
+            return move.typeOf() == EN_PASSANT;
+          });
       if (all_ep) {
         v = v1;
       }
@@ -2162,7 +2166,10 @@ int Tablebase::probe_dtz(chess::Board &board) {
           }
       }*/
       // micro-optimized:
-      bool all_ep = std::all_of(moves2.begin(), moves2.end(), [](const Move& move){ return move.typeOf() == EN_PASSANT; });
+      bool all_ep =
+          std::all_of(moves2.begin(), moves2.end(), [](const Move &move) {
+            return move.typeOf() == EN_PASSANT;
+          });
       if (all_ep) {
         v = v1;
       }
