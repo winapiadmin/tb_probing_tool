@@ -1,9 +1,26 @@
+cmake-build-*
+# Ignore everything
 *
-**/
+
+# Allow source and essential files
 !*.cpp
 !*.h
-!.github/
-!src/
 !CMakeLists.txt
-!LICENSE
 !README.md
+!LICENSE
+!.gitignore
+!.gitattributes
+!.github/**
+!.github/
+!syzygy/
+!*.csv
+!*.py
+# Ignore build/editor junk
+build/
+out/
+.vs/
+.vscode/
+.cache/
+cmake-*/
+# Ignore asm outputs
+*.s

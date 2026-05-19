@@ -1,0 +1,130 @@
+name: test
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - '**/*.c'
+      - '**/*.cpp'
+      - '**/*.h'
+      - '**/*.hpp'
+      - '.github/workflows/**'
+      - '**/CMakeLists.txt'
+      - '**/*.py'
+      - '**/*.csv'
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      commit_sha: ${{ steps.auto-commit.outputs.commit_hash }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: Run clang-format
+        run: clang-format -i $(git ls-files '*.cpp' '*.hpp' '*.h' '*.c')
+
+      - name: Commit and push changes
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        id: auto-commit
+        uses: stefanzweifel/git-auto-commit-action@v7
+
+  build:
+    needs: format
+    if: ${{ needs.format.result == 'success' || needs.format.result == 'skipped' }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Debug, Release]
+        cpp_compiler: [g++, clang++, cl]
+
+        exclude:
+          - os: ubuntu-latest
+            cpp_compiler: cl
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set build dir
+        id: vars
+        shell: bash
+        run: |
+          echo "dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+          echo "TBPROBE_TESTS_SYZYGY_CSV=${{ github.workspace }}/syzygy/tests.csv" >> $GITHUB_ENV
+          echo "TBPROBE_TESTS_SYZYGY_PATH=${{ github.workspace }}/build/tb" >> $GITHUB_ENV
+
+      - name: install wget
+        if: matrix.os == 'windows-latest'
+        run: choco install wget -y
+      - name: download syzygy 3-4-5 if needed
+        shell: bash
+        run: |
+          TB_PATH="${{ steps.vars.outputs.dir }}/tb"
+
+          # Convert Windows path to POSIX when running on Windows
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            TB_PATH="$(cygpath -u "$TB_PATH")"
+          fi
+
+          wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused \
+            --no-verbose -r -nd -nH --cut-dirs=2 --no-parent \
+            --reject="index.html*" -e robots=off \
+            https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/ \
+            -P "$TB_PATH"
+
+          wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused \
+            --no-verbose -r -nd -nH --cut-dirs=2 --no-parent \
+            --reject="index.html*" -e robots=off \
+            https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/ \
+            -P "$TB_PATH"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install Python Pre-check Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install chess
+      - name: Verify TBs
+        run: |
+          python ${{ github.workspace }}/verify_syzygy_tb.py
+      - name: Configure CMake
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            if [[ "${{ matrix.cpp_compiler }}" == "clang++" ]]; then
+              SANITIZERS="memory,undefined"
+            else
+              SANITIZERS="address,undefined"
+            fi
+          fi
+          cmake -B "${{ steps.vars.outputs.dir }}" \
+                -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+                -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+                -DSANITIZERS=${SANITIZERS} \
+                -DBUILD_TESTING=TRUE \
+                -S "${{ github.workspace }}"
+
+      - name: Build
+        run: cmake --build ${{ steps.vars.outputs.dir }} --config ${{ matrix.build_type }}
+
+      - name: Test  
+        working-directory: ${{ steps.vars.outputs.dir }}
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            ctest --build-config ${{ matrix.build_type }} --verbose -j 4
+          else
+            ctest --verbose -j 4
+          fi
+
