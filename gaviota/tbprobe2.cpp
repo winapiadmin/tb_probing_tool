@@ -67,8 +67,10 @@ std::vector<uint8_t> decompress(const std::vector<uint8_t> &compressed_data,
 int PythonTablebase::_tb_probe(Request &req) {
   std::unique_ptr<std::ifstream> &stream = _setup_tablebase(req);
   int64_t idx = EGKEY.at(req.egkey).pctoi(req);
+  if (idx == NOINDEX) {
+    throw std::runtime_error("Position cannot be indexed for this table");
+  }
   auto [offset, remainder] = split_index(idx);
-
   auto cache_key = std::make_tuple(req.egkey, offset, req.side);
   if (block_cache.find(cache_key) == block_cache.end()) {
     TableBlock t(req.egkey, req.side, offset, block_age);
