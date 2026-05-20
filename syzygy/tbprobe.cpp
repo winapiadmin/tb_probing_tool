@@ -356,8 +356,8 @@ uint64_t read_u64_be(const uint8_t *data, size_t pos) {
 }
 
 Table::Table(std::string _path) : path(_path) {
-  this->_flags=0;
-  this->_next=0;
+  this->_flags = 0;
+  this->_next = 0;
   this->initialized = false;
   this->data = nullptr;
   this->data_size = 0;

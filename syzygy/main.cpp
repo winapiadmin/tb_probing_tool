@@ -64,7 +64,7 @@ TEST_CASE("TB probing") {
 
     int expected_wdl = std::stoi(wdl_s);
     int expected_dtz = std::stoi(dtz_s);
-    int actual_wdl=0, actual_dtz=0;
+    int actual_wdl = 0, actual_dtz = 0;
     try {
       actual_wdl = tb->probe_wdl(board);
       actual_dtz = tb->probe_dtz(board);
