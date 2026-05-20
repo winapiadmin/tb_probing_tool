@@ -101,8 +101,9 @@ int PythonTablebase::_tb_probe(Request &req) {
                       NUM_LITERAL_CONTEXT_BITS;
       for (int i = 0; i < 4; ++i)
         properties[1 + i] = (DICTIONARY_SIZE >> (8 * i)) & 0xFF;
+      const uint64_t n64 = static_cast<uint64_t>(n);
       for (int i = 0; i < 8; ++i)
-        properties[5 + i] = (n >> (8 * i)) & 0xFF;
+        properties[5 + i] = static_cast<uint8_t>((n64 >> (8 * i)) & 0xFF);
       lzma_input.reserve(properties.size() + buffer_zipped.size() - 15);
       lzma_input.insert(lzma_input.end(), properties.begin(), properties.end());
       lzma_input.insert(lzma_input.end(), buffer_zipped.begin() + 15,
