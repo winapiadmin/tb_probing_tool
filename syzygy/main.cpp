@@ -44,7 +44,7 @@ TEST_CASE("TB probing") {
   const std::string tb_path = tb_path_env ? tb_path_env : "tb";
   std::unique_ptr<tbprobe::syzygy::Tablebase> tb =
       tbprobe::syzygy::open_tablebase(tb_path);
-  const char *csv_path_env = std::getenv("TBPROBE_TESTS_SYZYGY_CSV");
+  const char *csv_path_env = std::getenv("TBPROBE_TESTS_CSV");
   const std::string csv_path = csv_path_env ? csv_path_env : "tests.csv";
   std::ifstream f(csv_path);
   REQUIRE(f.is_open());
@@ -64,7 +64,7 @@ TEST_CASE("TB probing") {
 
     int expected_wdl = std::stoi(wdl_s);
     int expected_dtz = std::stoi(dtz_s);
-    int actual_wdl, actual_dtz;
+    int actual_wdl=0, actual_dtz=0;
     try {
       actual_wdl = tb->probe_wdl(board);
       actual_dtz = tb->probe_dtz(board);

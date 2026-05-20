@@ -336,9 +336,7 @@ public:
   std::vector<int> norm[2];
   std::vector<PawnFileData> files;
 
-  inline WdlTable(const std::string &path) : Table(path) {
-    Table::_next = 0;
-    Table::_flags = 0;
+  inline WdlTable(const std::string &_path) : Table(_path) {
     factor.resize(2, std::vector<uint64_t>(TBPIECES, 0));
   }
   void init_table_wdl();
@@ -359,9 +357,7 @@ public:
   size_t p_map;
   std::vector<chess::PieceType> pieces;
 
-  inline DtzTable(const std::string &path) : Table(path) {
-    Table::_next = 0;
-    Table::_flags = 0;
+  inline DtzTable(const std::string &_path) : Table(_path) {
     factor.assign(TBPIECES, 0);
     norm.assign(num, 0);
     tb_size.assign(4, 0);
@@ -379,7 +375,7 @@ public:
   /**
    * Manages a collection of tablebase files for probing.
    */
-  inline Tablebase(std::optional<int> max_fds = 128) : max_fds(max_fds) {}
+  inline Tablebase(std::optional<int> _max_fds = 128) : max_fds(_max_fds) {}
 
   std::optional<int> max_fds;
   std::deque<Table *> lru;

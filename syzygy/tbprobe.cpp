@@ -104,11 +104,11 @@ std::string normalize_tablename(const std::string &name, bool mirror) {
   std::string w = name.substr(0, pos);
   std::string b = name.substr(pos + 1);
 
-  std::sort(w.begin(), w.end(), [index_in_PCHR](char a, char b) {
-    return index_in_PCHR(a) < index_in_PCHR(b);
+  std::sort(w.begin(), w.end(), [index_in_PCHR](char c1, char c2) {
+    return index_in_PCHR(c1) < index_in_PCHR(c2);
   });
-  std::sort(b.begin(), b.end(), [index_in_PCHR](char a, char b) {
-    return index_in_PCHR(a) < index_in_PCHR(b);
+  std::sort(b.begin(), b.end(), [index_in_PCHR](char c1, char c2) {
+    return index_in_PCHR(c1) < index_in_PCHR(c2);
   });
 
   std::vector<int> b_indices;
@@ -355,7 +355,9 @@ uint64_t read_u64_be(const uint8_t *data, size_t pos) {
   return res;
 }
 
-Table::Table(std::string path) : path(path) {
+Table::Table(std::string _path) : path(_path) {
+  this->_flags=0;
+  this->_next=0;
   this->initialized = false;
   this->data = nullptr;
   this->data_size = 0;
@@ -866,7 +868,7 @@ uint64_t Table::encode_piece(const std::vector<int> &norm,
     for (int m = i; m < i + t; ++m) {
       Square p = pos[m];
       int j_count = std::count_if(pos.begin(), pos.begin() + i,
-                                  [p](int i) { return p > i; });
+                                  [p](int _i) { return p > _i; });
       s += binom(p - j_count, m - i + 1);
     }
 
