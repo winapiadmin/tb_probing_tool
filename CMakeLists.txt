@@ -35,7 +35,8 @@ if(NOT LibLZMA_FOUND)
     FetchContent_Declare(
         xz
         GIT_REPOSITORY https://git.tukaani.org/xz.git
-        GIT_TAG master
+        # Pin to a released tag or commit for reproducible builds
+        GIT_TAG v5.6.2
     )
     FetchContent_MakeAvailable(xz)
     add_library(LibLZMA::LibLZMA ALIAS liblzma)
