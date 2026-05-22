@@ -7,7 +7,20 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <cassert>
 namespace tbprobe::gaviota {
+constexpr std::pair<int, int> divmod(int a, int b) {
+  // python modulo AND DIVISION behaviors:(
+  int q = a / b;
+  int r = a % b;
+
+  if ((a ^ b) < 0 && r != 0) {
+    q -= 1;
+    r += b;
+  }
+
+  return {q, r};
+}
 constexpr chess::Square NOSQUARE = chess::SQ_NONE;
 constexpr int NOINDEX = -1;
 
@@ -218,23 +231,14 @@ int64_t kpppk_pctoindex(const Request &);
 
 std::vector<int> egtb_block_unpack(int side, int n,
                                    const std::vector<uint8_t> &bp);
-inline std::pair<int, int> split_index(int i) {
-  // python modulo AND DIVISION behaviors:(
-  int q = i / ENTRIES_PER_BLOCK;
-  int r = i % ENTRIES_PER_BLOCK;
-
-  if ((i ^ ENTRIES_PER_BLOCK) < 0 && r != 0) {
-    q -= 1;
-    r += ENTRIES_PER_BLOCK;
-  }
-
-  return {q, r};
+constexpr std::pair<int, int> split_index(int i) {
+  return divmod(i, ENTRIES_PER_BLOCK);
 }
 
 inline int opp(int side) { return side == 0 ? 1 : 0; }
 
 inline std::pair<int, int> unpackdist(int d) {
-  return {d >> PLYSHIFT, d & INFOMASK};
+  return divmod(d,1ULL<<PLYSHIFT);
 }
 
 constexpr int tb_DRAW = 0;

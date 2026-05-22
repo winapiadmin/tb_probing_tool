@@ -7,6 +7,8 @@
 #include <position.h>
 #include <stdexcept>
 #include <system_error>
+#include <printers.h>
+#include <iomanip>
 namespace tbprobe::gaviota {
 std::array<std::array<int, 64>, 64> FLIPT = [] {
   std::array<std::array<int, 64>, 64> ret{};
@@ -295,9 +297,7 @@ std::pair<std::vector<int>, std::vector<int>> sortlists(std::vector<int> ws,
   }
   std::stable_sort(combined.begin(), combined.end(),
                    [](const auto &a, const auto &b) {
-                     if (a.first != b.first)
-                       return a.first > b.first;
-                     return a.second > b.second;
+                     return a.first > b.first;
                    });
   std::vector<int> ws2, wp2;
   for (auto const &p : combined) {
@@ -315,15 +315,11 @@ void Request::sortlists(std::vector<chess::Square> &ws,
   }
   std::stable_sort(combined.begin(), combined.end(),
                    [](const auto &a, const auto &b) {
-                     if (a.first != b.first)
-                       return a.first > b.first;
-                     return a.second > b.second;
+                     return a.first > b.first;
                    });
-  ws.clear();
-  wp.clear();
-  for (auto const &p : combined) {
-    wp.push_back(p.first);
-    ws.push_back(p.second);
+  for (size_t i = 0; i < combined.size(); ++i) {
+    wp[i] = combined[i].first;
+    ws[i] = combined[i].second;
   }
 }
 int64_t kxk_pctoindex(const Request &c) {
@@ -1431,6 +1427,20 @@ int PythonTablebase::_probe_dtm_no_ep(chess::Board &board) {
   }
   int side = (board.sideToMove() == chess::WHITE) ? 0 : 1;
   Request req(white_squares, white_types, black_squares, black_types, side);
+  std::cout << std::quoted(req.egkey) << '\n';
+std::cout << req.is_reversed << '\n';
+std::cout << req.side << '\n';
+std::cout << req.realside << '\n';
+for (auto s : req.white_piece_types)
+    std::cout << s << ' ';
+
+for (auto s : req.black_piece_types)
+    std::cout << s << ' ';
+for (auto s : req.white_piece_squares)
+    std::cout << s << ' ';
+
+for (auto s : req.black_piece_squares)
+    std::cout << s << ' ';
 
   int dtm = _tb_probe(req);
   auto [ply, res] = unpackdist(dtm);
@@ -1570,6 +1580,9 @@ PythonTablebase::egtb_loadindexes(std::string egkey,
     stream->seekg(0);
     uint32_t header[10];
     stream->read((char *)header, 40);
+    if (stream->gcount() != 40LL) {
+      throw std::runtime_error("Short read while loading indexes");
+    }
     int offset = header[8];
     int n_idx = ((offset - 40) / 4);
     std::vector<uint32_t> p(n_idx);

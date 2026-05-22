@@ -3,7 +3,7 @@
 #include <fstream>
 #include <lzma.h>
 #include <stdexcept>
-
+#include <iostream>
 namespace tbprobe::gaviota {
 
 static const char *lzma_ret_name(lzma_ret r) {
@@ -39,7 +39,6 @@ static const char *lzma_ret_name(lzma_ret r) {
 std::vector<uint8_t> decompress(const std::vector<uint8_t> &compressed_data,
                                 size_t uncompressed_size) {
   lzma_stream strm = LZMA_STREAM_INIT;
-
   if (lzma_alone_decoder(&strm, UINT64_MAX) != LZMA_OK) {
     throw std::runtime_error("Failed to initialize LZMA decoder");
   }
@@ -48,18 +47,34 @@ std::vector<uint8_t> decompress(const std::vector<uint8_t> &compressed_data,
 
   strm.next_in = compressed_data.data();
   strm.avail_in = compressed_data.size();
-
   strm.next_out = decompressed_data.data();
   strm.avail_out = decompressed_data.size();
 
-  lzma_ret ret = lzma_code(&strm, LZMA_RUN);
+  while (true) {
+    lzma_ret ret = lzma_code(&strm, LZMA_RUN);
+    if (ret == LZMA_STREAM_END)
+      break;
+    if (ret != LZMA_OK) {
+      lzma_end(&strm);
+      throw std::runtime_error(
+          "Decompression failed (Code: " + std::to_string(ret) + " - " +
+          lzma_ret_name(ret) + ")");
+    }
+    if (strm.avail_in == 0 && strm.avail_out > 0) {
+      lzma_end(&strm);
+      throw std::runtime_error("Decompression stopped before output was filled");
+    }
+  }
 
+  size_t produced = decompressed_data.size() - strm.avail_out;
+  size_t consumed = compressed_data.size() - strm.avail_in;
   lzma_end(&strm);
 
-  if ((ret != LZMA_OK && ret != LZMA_STREAM_END) || strm.avail_out > 0) {
-    throw std::runtime_error(
-        "Decompression failed (Code: " + std::to_string(ret) + " - " +
-        lzma_ret_name(ret) + ")");
+  if (produced != uncompressed_size) {
+    throw std::runtime_error("Wrong decompressed size");
+  }
+  if (consumed == 0) {
+    throw std::runtime_error("No compressed input consumed");
   }
 
   return decompressed_data;
@@ -77,12 +92,15 @@ int PythonTablebase::_tb_probe(Request &req) {
     int block = egtb_block_getnumber(req, idx);
     int n = egtb_block_getsize(req, idx);
     int z = egtb_block_getsize_zipped(req.egkey, block);
-
     egtb_block_park(req.egkey, block, stream);
     std::vector<uint8_t> buffer_zipped(z);
-    stream->read((char *)buffer_zipped.data(), z);
-    if (buffer_zipped.empty())
-      throw std::runtime_error("Compressed buffer is empty");
+    stream->read(reinterpret_cast<char *>(buffer_zipped.data()), z);
+    const std::streamsize bytes_read = stream->gcount();
+    if (bytes_read != static_cast<std::streamsize>(z)) {
+      throw std::runtime_error("Compressed buffer read failed: expected " +
+                               std::to_string(z) + " bytes, got " +
+                               std::to_string(bytes_read));
+    }
 
     std::vector<uint8_t> lzma_input;
     if (buffer_zipped[0] == 0) {
@@ -113,6 +131,9 @@ int PythonTablebase::_tb_probe(Request &req) {
     }
 
     std::vector<uint8_t> buffer_packed = decompress(lzma_input, n);
+    if (buffer_packed.size() != static_cast<size_t>(n)) {
+      throw std::runtime_error("Decompressed block size mismatch");
+    }
     t.pcache = egtb_block_unpack(req.side, n, buffer_packed);
     block_cache.insert({cache_key, t});
 
@@ -134,3 +155,4 @@ int PythonTablebase::_tb_probe(Request &req) {
 }
 
 } // namespace tbprobe::gaviota
+
