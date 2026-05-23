@@ -1727,7 +1727,7 @@ int PythonTablebase::_tb_probe(Request &req) {
                            (static_cast<uint32_t>(buffer_zipped[4]) << 8) |
                            (static_cast<uint32_t>(buffer_zipped[5]) << 16) |
                            (static_cast<uint32_t>(buffer_zipped[6]) << 24);
-      const uint32_t MAX_DICT_SIZE = 256 * 1024 * 1024;
+      const uint32_t MAX_DICT_SIZE = 64 * 1024 * 1024;
       if (dict_size > MAX_DICT_SIZE) {
         // Clamp dictionary size in the header
         lzma_input[1] = MAX_DICT_SIZE & 0xFF;
