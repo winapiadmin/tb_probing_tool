@@ -63,11 +63,20 @@ jobs:
           echo "TBPROBE_TESTS_CSV=${{ github.workspace }}/tests.csv" >> $GITHUB_ENV
           echo "TBPROBE_TESTS_SYZYGY_PATH=${{ github.workspace }}/build/syzygy_tb" >> $GITHUB_ENV
           echo "TBPROBE_TESTS_GAVIOTA_PATH=${{ github.workspace }}/build/gaviota_tb" >> $GITHUB_ENV
-
+      - name: Cache Chess Tablebases
+        id: cache-tablebases
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.vars.outputs.dir }}/syzygy_tb
+            ${{ steps.vars.outputs.dir }}/gaviota_tb
+        
+          key: chess-tablebases-v1
       - name: install wget
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest' && steps.cache-tablebases.outputs.cache-hit != 'true'
         run: choco install wget -y
       - name: download tb
+        if: steps.cache-tablebases.outputs.cache-hit != 'true' 
         shell: bash
         run: |
           SYZYGY_TB_PATH="${{ steps.vars.outputs.dir }}/syzygy_tb"
