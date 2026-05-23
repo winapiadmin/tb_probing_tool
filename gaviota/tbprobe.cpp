@@ -3,8 +3,8 @@
 #include <attacks.h>
 #include <filesystem>
 #include <fstream>
-#include <lzma.h>
 #include <iostream>
+#include <lzma.h>
 #include <position.h>
 #include <printers.h>
 #include <stdexcept>
@@ -1361,7 +1361,8 @@ void PythonTablebase::add_directory(std::string directory) {
     std::string filename = entry.path().filename().string();
     constexpr std::string_view suffix = ".gtb.cp4";
     if (filename.size() > suffix.size() &&
-        filename.compare(filename.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        filename.compare(filename.size() - suffix.size(), suffix.size(),
+                         suffix) == 0) {
       std::string key = filename.substr(0, filename.size() - suffix.size());
       available_tables[key] = entry.path().string();
     }
@@ -1585,7 +1586,8 @@ PythonTablebase::egtb_loadindexes(std::string egkey,
 int PythonTablebase::egtb_block_getsize_zipped(std::string egkey, int block) {
   const auto &idx = zipinfo[egkey].blockindex;
   if (block < 0 || static_cast<size_t>(block + 1) >= idx.size())
-    throw std::runtime_error("Block index out of bounds in egtb_block_getsize_zipped");
+    throw std::runtime_error(
+        "Block index out of bounds in egtb_block_getsize_zipped");
   return idx[block + 1] - idx[block];
 }
 
