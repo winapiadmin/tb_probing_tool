@@ -1697,10 +1697,12 @@ int PythonTablebase::_tb_probe(Request &req) {
     int n = egtb_block_getsize(req, idx);
     int z = egtb_block_getsize_zipped(req.egkey, block);
     if (z <= 0 || static_cast<size_t>(z) > static_cast<size_t>(n) * 16 + 4096)
-      throw std::runtime_error(
-          "Invalid compressed block size (" + std::to_string(z) + " bytes) "
-          "for egkey=" + req.egkey + " block=" + std::to_string(block) +
-          " (uncompressed=" + std::to_string(n) + ")");
+      throw std::runtime_error("Invalid compressed block size (" +
+                               std::to_string(z) +
+                               " bytes) "
+                               "for egkey=" +
+                               req.egkey + " block=" + std::to_string(block) +
+                               " (uncompressed=" + std::to_string(n) + ")");
     egtb_block_park(req.egkey, block, stream);
     std::vector<uint8_t> buffer_zipped(static_cast<size_t>(z));
     stream->read(reinterpret_cast<char *>(buffer_zipped.data()), z);
