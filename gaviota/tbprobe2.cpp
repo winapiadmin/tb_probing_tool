@@ -1,9 +1,9 @@
 #include "tbprobe.h"
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 #include <lzma.h>
 #include <stdexcept>
-#include <iostream>
 namespace tbprobe::gaviota {
 
 static const char *lzma_ret_name(lzma_ret r) {
@@ -62,7 +62,8 @@ std::vector<uint8_t> decompress(const std::vector<uint8_t> &compressed_data,
     }
     if (strm.avail_in == 0 && strm.avail_out > 0) {
       lzma_end(&strm);
-      throw std::runtime_error("Decompression stopped before output was filled");
+      throw std::runtime_error(
+          "Decompression stopped before output was filled");
     }
   }
 
@@ -155,4 +156,3 @@ int PythonTablebase::_tb_probe(Request &req) {
 }
 
 } // namespace tbprobe::gaviota
-
