@@ -60,44 +60,52 @@ jobs:
         shell: bash
         run: |
           echo "dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "TBPROBE_TESTS_SYZYGY_CSV=${{ github.workspace }}/syzygy/tests.csv" >> $GITHUB_ENV
-          echo "TBPROBE_TESTS_SYZYGY_PATH=${{ github.workspace }}/build/tb" >> $GITHUB_ENV
-
+          echo "TBPROBE_TESTS_CSV=${{ github.workspace }}/tests.csv" >> $GITHUB_ENV
+          echo "TBPROBE_TESTS_SYZYGY_PATH=${{ github.workspace }}/build/syzygy_tb" >> $GITHUB_ENV
+          echo "TBPROBE_TESTS_GAVIOTA_PATH=${{ github.workspace }}/build/gaviota_tb" >> $GITHUB_ENV
+      - name: Cache Chess Tablebases
+        id: cache-tablebases
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ${{ steps.vars.outputs.dir }}/syzygy_tb
+            ${{ steps.vars.outputs.dir }}/gaviota_tb
+        
+          key: chess-tablebases-v1
       - name: install wget
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest' && steps.cache-tablebases.outputs.cache-hit != 'true'
         run: choco install wget -y
-      - name: download syzygy 3-4-5 if needed
+      - name: download tb
+        if: steps.cache-tablebases.outputs.cache-hit != 'true' 
         shell: bash
         run: |
-          TB_PATH="${{ steps.vars.outputs.dir }}/tb"
+          SYZYGY_TB_PATH="${{ steps.vars.outputs.dir }}/syzygy_tb"
+          GAVIOTA_TB_PATH="${{ steps.vars.outputs.dir }}/gaviota_tb"
 
           # Convert Windows path to POSIX when running on Windows
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            TB_PATH="$(cygpath -u "$TB_PATH")"
+            SYZYGY_TB_PATH="$(cygpath -u "$SYZYGY_TB_PATH")"
+            GAVIOTA_TB_PATH="$(cygpath -u "$GAVIOTA_TB_PATH")"
           fi
 
           wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused \
             --no-verbose -r -nd -nH --cut-dirs=2 --no-parent \
             --reject="index.html*" -e robots=off \
             https://tablebase.lichess.ovh/tables/standard/3-4-5-wdl/ \
-            -P "$TB_PATH"
+            -P "$SYZYGY_TB_PATH"
 
           wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused \
             --no-verbose -r -nd -nH --cut-dirs=2 --no-parent \
             --reject="index.html*" -e robots=off \
             https://tablebase.lichess.ovh/tables/standard/3-4-5-dtz/ \
-            -P "$TB_PATH"
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Install Python Pre-check Tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install chess
-      - name: Verify TBs
-        run: |
-          python ${{ github.workspace }}/verify_syzygy_tb.py
+            -P "$SYZYGY_TB_PATH"
+
+          wget --tries=3 --waitretry=5 --timeout=30 --retry-connrefused \
+            --no-verbose -r -nd -nH --cut-dirs=2 --no-parent \
+            --reject="index.html*" -e robots=off \
+            https://tablebase.lichess.ovh/tables/standard/Gaviota/ \
+            -P "$GAVIOTA_TB_PATH"
+            
       - name: Configure CMake
         shell: bash
         run: |
