@@ -3,12 +3,12 @@
 #include <attacks.h>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <position.h>
+#include <printers.h>
 #include <stdexcept>
 #include <system_error>
-#include <printers.h>
-#include <iomanip>
 namespace tbprobe::gaviota {
 std::array<std::array<int, 64>, 64> FLIPT = [] {
   std::array<std::array<int, 64>, 64> ret{};
@@ -295,10 +295,9 @@ std::pair<std::vector<int>, std::vector<int>> sortlists(std::vector<int> ws,
   for (size_t i = 0; i < wp.size(); ++i) {
     combined.push_back({wp[i], ws[i]});
   }
-  std::stable_sort(combined.begin(), combined.end(),
-                   [](const auto &a, const auto &b) {
-                     return a.first > b.first;
-                   });
+  std::stable_sort(
+      combined.begin(), combined.end(),
+      [](const auto &a, const auto &b) { return a.first > b.first; });
   std::vector<int> ws2, wp2;
   for (auto const &p : combined) {
     wp2.push_back(p.first);
@@ -313,10 +312,9 @@ void Request::sortlists(std::vector<chess::Square> &ws,
   for (size_t i = 0; i < wp.size(); ++i) {
     combined.push_back({wp[i], ws[i]});
   }
-  std::stable_sort(combined.begin(), combined.end(),
-                   [](const auto &a, const auto &b) {
-                     return a.first > b.first;
-                   });
+  std::stable_sort(
+      combined.begin(), combined.end(),
+      [](const auto &a, const auto &b) { return a.first > b.first; });
   for (size_t i = 0; i < combined.size(); ++i) {
     wp[i] = combined[i].first;
     ws[i] = combined[i].second;

@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <string>
@@ -7,7 +8,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <cassert>
 namespace tbprobe::gaviota {
 constexpr std::pair<int, int> divmod(int a, int b) {
   // python modulo AND DIVISION behaviors:(
@@ -238,7 +238,7 @@ constexpr std::pair<int, int> split_index(int i) {
 inline int opp(int side) { return side == 0 ? 1 : 0; }
 
 inline std::pair<int, int> unpackdist(int d) {
-  return divmod(d,1ULL<<PLYSHIFT);
+  return divmod(d, 1ULL << PLYSHIFT);
 }
 
 constexpr int tb_DRAW = 0;
