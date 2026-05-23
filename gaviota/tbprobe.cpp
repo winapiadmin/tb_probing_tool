@@ -3,7 +3,7 @@
 #include <attacks.h>
 #include <filesystem>
 #include <fstream>
-#include <iomanip>
+#include <lzma.h>
 #include <iostream>
 #include <position.h>
 #include <printers.h>
@@ -291,6 +291,7 @@ std::array<int, MAX_KKINDEX> WKSQ = wksq;
 std::array<int, MAX_KKINDEX> BKSQ = bksq;
 std::pair<std::vector<int>, std::vector<int>> sortlists(std::vector<int> ws,
                                                         std::vector<int> wp) {
+  assert(ws.size() >= wp.size());
   std::vector<std::pair<int, int>> combined;
   for (size_t i = 0; i < wp.size(); ++i) {
     combined.push_back({wp[i], ws[i]});
@@ -1347,7 +1348,7 @@ int dtm_unpack(int stm, int packed) {
       prefx = 0;
     }
   }
-  return prefx | (plies << 3);
+  return prefx | (static_cast<int>(static_cast<unsigned>(plies) << 3));
 }
 
 void PythonTablebase::add_directory(std::string directory) {
@@ -1358,10 +1359,10 @@ void PythonTablebase::add_directory(std::string directory) {
 
   for (const auto &entry : std::filesystem::directory_iterator(directory)) {
     std::string filename = entry.path().filename().string();
-    if (filename.find(".gtb.cp4") != std::string::npos) {
-      std::string key = filename;
-      size_t pos = key.find(".gtb.cp4");
-      key.erase(pos);
+    constexpr std::string_view suffix = ".gtb.cp4";
+    if (filename.size() > suffix.size() &&
+        filename.compare(filename.size() - suffix.size(), suffix.size(), suffix) == 0) {
+      std::string key = filename.substr(0, filename.size() - suffix.size());
       available_tables[key] = entry.path().string();
     }
   }
@@ -1564,18 +1565,28 @@ PythonTablebase::egtb_loadindexes(std::string egkey,
     if (stream->gcount() != 40LL) {
       throw std::runtime_error("Short read while loading indexes");
     }
-    int offset = header[8];
-    int n_idx = ((offset - 40) / 4);
-    std::vector<uint32_t> p(n_idx);
-    stream->read((char *)p.data(), n_idx * 4);
-    zipinfo[egkey] = {0, n_idx, p};
+    uint32_t offset = header[8];
+    if (offset < 40)
+      throw std::runtime_error("Invalid offset in tablebase index header");
+    uint64_t n_idx = (offset - 40) / 4;
+    if (n_idx == 0 || n_idx > 1024 * 1024)
+      throw std::runtime_error("Invalid index count in tablebase header");
+    std::vector<uint32_t> p(static_cast<size_t>(n_idx));
+    const std::streamsize bytes_to_read =
+        static_cast<std::streamsize>(n_idx) * static_cast<std::streamsize>(4);
+    stream->read(reinterpret_cast<char *>(p.data()), bytes_to_read);
+    if (stream->gcount() != bytes_to_read)
+      throw std::runtime_error("Short read while loading block index");
+    zipinfo[egkey] = {0, static_cast<int>(n_idx), p};
   }
   return zipinfo[egkey];
 }
 
 int PythonTablebase::egtb_block_getsize_zipped(std::string egkey, int block) {
-  return zipinfo[egkey].blockindex[block + 1] -
-         zipinfo[egkey].blockindex[block];
+  const auto &idx = zipinfo[egkey].blockindex;
+  if (block < 0 || static_cast<size_t>(block + 1) >= idx.size())
+    throw std::runtime_error("Block index out of bounds in egtb_block_getsize_zipped");
+  return idx[block + 1] - idx[block];
 }
 
 int PythonTablebase::egtb_block_park(std::string egkey, int block,
@@ -1589,6 +1600,156 @@ PythonTablebase open_tablebase(std::string directory) {
   PythonTablebase tables;
   tables.add_directory(directory);
   return tables;
+}
+// Decompression
+static const char *lzma_ret_name(lzma_ret r) {
+  switch (r) {
+  case LZMA_OK:
+    return "LZMA_OK";
+  case LZMA_STREAM_END:
+    return "LZMA_STREAM_END";
+  case LZMA_NO_CHECK:
+    return "LZMA_NO_CHECK";
+  case LZMA_UNSUPPORTED_CHECK:
+    return "LZMA_UNSUPPORTED_CHECK";
+  case LZMA_GET_CHECK:
+    return "LZMA_GET_CHECK";
+  case LZMA_MEM_ERROR:
+    return "LZMA_MEM_ERROR";
+  case LZMA_MEMLIMIT_ERROR:
+    return "LZMA_MEMLIMIT_ERROR";
+  case LZMA_FORMAT_ERROR:
+    return "LZMA_FORMAT_ERROR";
+  case LZMA_OPTIONS_ERROR:
+    return "LZMA_OPTIONS_ERROR";
+  case LZMA_DATA_ERROR:
+    return "LZMA_DATA_ERROR";
+  case LZMA_BUF_ERROR:
+    return "LZMA_BUF_ERROR";
+  case LZMA_PROG_ERROR:
+    return "LZMA_PROG_ERROR";
+  default:
+    return "UNKNOWN";
+  }
+}
+std::vector<uint8_t> decompress(const std::vector<uint8_t> &compressed_data,
+                                size_t uncompressed_size) {
+  lzma_stream strm = LZMA_STREAM_INIT;
+  if (lzma_alone_decoder(&strm, UINT64_MAX) != LZMA_OK) {
+    throw std::runtime_error("Failed to initialize LZMA decoder");
+  }
+
+  std::vector<uint8_t> decompressed_data(uncompressed_size);
+
+  strm.next_in = compressed_data.data();
+  strm.avail_in = compressed_data.size();
+  strm.next_out = decompressed_data.data();
+  strm.avail_out = decompressed_data.size();
+
+  while (true) {
+    lzma_ret ret = lzma_code(&strm, LZMA_RUN);
+    if (ret == LZMA_STREAM_END)
+      break;
+    if (ret != LZMA_OK) {
+      lzma_end(&strm);
+      throw std::runtime_error(
+          "Decompression failed (Code: " + std::to_string(ret) + " - " +
+          lzma_ret_name(ret) + ")");
+    }
+    if (strm.avail_in == 0 && strm.avail_out > 0) {
+      lzma_end(&strm);
+      throw std::runtime_error(
+          "Decompression stopped before output was filled");
+    }
+  }
+
+  size_t produced = decompressed_data.size() - strm.avail_out;
+  size_t consumed = compressed_data.size() - strm.avail_in;
+  lzma_end(&strm);
+
+  if (produced != uncompressed_size) {
+    throw std::runtime_error("Wrong decompressed size");
+  }
+  if (consumed == 0) {
+    throw std::runtime_error("No compressed input consumed");
+  }
+
+  return decompressed_data;
+}
+int PythonTablebase::_tb_probe(Request &req) {
+  std::unique_ptr<std::ifstream> &stream = _setup_tablebase(req);
+  int64_t idx = EGKEY.at(req.egkey).pctoi(req);
+  if (idx == NOINDEX) {
+    throw std::runtime_error("Position cannot be indexed for this table");
+  }
+  auto [offset, remainder] = split_index(idx);
+  auto cache_key = std::make_tuple(req.egkey, offset, req.side);
+  if (block_cache.find(cache_key) == block_cache.end()) {
+    TableBlock t(req.egkey, req.side, offset, block_age);
+    int block = egtb_block_getnumber(req, idx);
+    int n = egtb_block_getsize(req, idx);
+    int z = egtb_block_getsize_zipped(req.egkey, block);
+    egtb_block_park(req.egkey, block, stream);
+    std::vector<uint8_t> buffer_zipped(z);
+    stream->read(reinterpret_cast<char *>(buffer_zipped.data()), z);
+    const std::streamsize bytes_read = stream->gcount();
+    if (bytes_read != static_cast<std::streamsize>(z)) {
+      throw std::runtime_error("Compressed buffer read failed: expected " +
+                               std::to_string(z) + " bytes, got " +
+                               std::to_string(bytes_read));
+    }
+
+    if (buffer_zipped.empty())
+      throw std::runtime_error("Empty compressed block");
+
+    std::vector<uint8_t> lzma_input;
+    if (buffer_zipped[0] == 0) {
+      if (buffer_zipped.size() < 2)
+        throw std::runtime_error("Invalid raw LZMA data");
+      lzma_input.assign(buffer_zipped.begin() + 2, buffer_zipped.end());
+    } else {
+      if (buffer_zipped.size() < 15)
+        throw std::runtime_error("Invalid LZMA86 data");
+      const uint32_t DICTIONARY_SIZE = 4096;
+      const uint8_t POS_STATE_BITS = 2;
+      const uint8_t NUM_LITERAL_POS_STATE_BITS = 0;
+      const uint8_t NUM_LITERAL_CONTEXT_BITS = 3;
+      std::vector<uint8_t> properties(13);
+      properties[0] = (POS_STATE_BITS * 5 + NUM_LITERAL_POS_STATE_BITS) * 9 +
+                      NUM_LITERAL_CONTEXT_BITS;
+      for (int i = 0; i < 4; ++i)
+        properties[1 + i] = (DICTIONARY_SIZE >> (8 * i)) & 0xFF;
+      const uint64_t n64 = static_cast<uint64_t>(n);
+      for (int i = 0; i < 8; ++i)
+        properties[5 + i] = static_cast<uint8_t>((n64 >> (8 * i)) & 0xFF);
+      lzma_input.reserve(properties.size() + buffer_zipped.size() - 15);
+      lzma_input.insert(lzma_input.end(), properties.begin(), properties.end());
+      lzma_input.insert(lzma_input.end(), buffer_zipped.begin() + 15,
+                        buffer_zipped.end());
+    }
+
+    std::vector<uint8_t> buffer_packed = decompress(lzma_input, n);
+    if (buffer_packed.size() != static_cast<size_t>(n)) {
+      throw std::runtime_error("Decompressed block size mismatch");
+    }
+    t.pcache = egtb_block_unpack(req.side, n, buffer_packed);
+    block_cache.insert({cache_key, t});
+
+    // LRU cache cleanup
+    if (block_cache.size() > 128) {
+      auto lru = std::min_element(block_cache.begin(), block_cache.end(),
+                                  [](const auto &a, const auto &b) {
+                                    return a.second.age < b.second.age;
+                                  });
+      block_cache.erase(lru);
+    }
+    (void)block_cache.at(cache_key).pcache.at(remainder);
+  } else {
+    block_cache.at(cache_key).age = block_age;
+  }
+
+  block_age++;
+  return block_cache.at(cache_key).pcache.at(remainder);
 }
 
 } // namespace tbprobe::gaviota

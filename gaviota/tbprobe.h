@@ -10,6 +10,7 @@
 #include <vector>
 namespace tbprobe::gaviota {
 constexpr std::pair<int, int> divmod(int a, int b) {
+  assert(b != 0);
   // python modulo AND DIVISION behaviors:(
   int q = a / b;
   int r = a % b;
@@ -171,7 +172,7 @@ struct Request {
   std::vector<chess::PieceType> white_types, black_types;
   std::vector<chess::Square> white_piece_squares, black_piece_squares;
   std::vector<chess::PieceType> white_piece_types, black_piece_types;
-  bool is_reversed;
+  bool is_reversed = false;
   int side, realside;
   Request(const std::vector<chess::Square> &_white_squares,
           const std::vector<chess::PieceType> &_white_types,

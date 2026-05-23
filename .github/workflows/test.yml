@@ -65,7 +65,7 @@ jobs:
           echo "TBPROBE_TESTS_GAVIOTA_PATH=${{ github.workspace }}/build/gaviota_tb" >> $GITHUB_ENV
       - name: Cache Chess Tablebases
         id: cache-tablebases
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ${{ steps.vars.outputs.dir }}/syzygy_tb
