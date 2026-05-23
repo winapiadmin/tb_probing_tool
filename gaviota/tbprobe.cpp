@@ -1588,6 +1588,10 @@ int PythonTablebase::egtb_block_getsize_zipped(std::string egkey, int block) {
   if (block < 0 || static_cast<size_t>(block + 1) >= idx.size())
     throw std::runtime_error(
         "Block index out of bounds in egtb_block_getsize_zipped");
+  if (idx[block + 1] < idx[block])
+    throw std::runtime_error(
+        "Corrupt block index (descending offsets) for egkey=" + egkey +
+        " block=" + std::to_string(block));
   return idx[block + 1] - idx[block];
 }
 
@@ -1637,7 +1641,9 @@ static const char *lzma_ret_name(lzma_ret r) {
 std::vector<uint8_t> decompress(const std::vector<uint8_t> &compressed_data,
                                 size_t uncompressed_size) {
   lzma_stream strm = LZMA_STREAM_INIT;
-  if (lzma_alone_decoder(&strm, UINT64_MAX) != LZMA_OK) {
+  const uint64_t MAX_MEMLIMIT = 256ULL * 1024 * 1024;
+  uint64_t memlimit = std::min(static_cast<uint64_t>(uncompressed_size) * 4, MAX_MEMLIMIT);
+  if (lzma_alone_decoder(&strm, memlimit) != LZMA_OK) {
     throw std::runtime_error("Failed to initialize LZMA decoder");
   }
 
@@ -1706,9 +1712,22 @@ int PythonTablebase::_tb_probe(Request &req) {
 
     std::vector<uint8_t> lzma_input;
     if (buffer_zipped[0] == 0) {
-      if (buffer_zipped.size() < 2)
+      if (buffer_zipped.size() < 15)
         throw std::runtime_error("Invalid raw LZMA data");
       lzma_input.assign(buffer_zipped.begin() + 2, buffer_zipped.end());
+      // Parse and validate dictionary size from LZMA header (bytes 1-4 of LZMA header = bytes 3-6 of buffer_zipped)
+      uint32_t dict_size = static_cast<uint32_t>(buffer_zipped[3]) |
+                           (static_cast<uint32_t>(buffer_zipped[4]) << 8) |
+                           (static_cast<uint32_t>(buffer_zipped[5]) << 16) |
+                           (static_cast<uint32_t>(buffer_zipped[6]) << 24);
+      const uint32_t MAX_DICT_SIZE = 256 * 1024 * 1024;
+      if (dict_size > MAX_DICT_SIZE) {
+        // Clamp dictionary size in the header
+        lzma_input[1] = MAX_DICT_SIZE & 0xFF;
+        lzma_input[2] = (MAX_DICT_SIZE >> 8) & 0xFF;
+        lzma_input[3] = (MAX_DICT_SIZE >> 16) & 0xFF;
+        lzma_input[4] = (MAX_DICT_SIZE >> 24) & 0xFF;
+      }
     } else {
       if (buffer_zipped.size() < 15)
         throw std::runtime_error("Invalid LZMA86 data");
