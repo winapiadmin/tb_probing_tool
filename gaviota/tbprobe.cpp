@@ -986,10 +986,8 @@ int64_t kakp_pctoindex(const Request &c) {
     wa = (chess::Square)flip_we(wa);
   }
 
-  /*chess::Square sq = pawn;
-  sq -= chess::NORTH;
-  int pslice = (sq + (sq & 3)) >> 1;*/
-  int pslice = wsq_to_pidx24(pawn);
+  int sq = pawn - 8;
+  int pslice = (sq + (sq & 3)) >> 1;
   return pslice * BLOCK_Ax + wk * BLOCK_Bx + bk * BLOCK_Cx + wa;
 }
 
@@ -1427,21 +1425,6 @@ int PythonTablebase::_probe_dtm_no_ep(chess::Board &board) {
   }
   int side = (board.sideToMove() == chess::WHITE) ? 0 : 1;
   Request req(white_squares, white_types, black_squares, black_types, side);
-  std::cout << std::quoted(req.egkey) << '\n';
-std::cout << req.is_reversed << '\n';
-std::cout << req.side << '\n';
-std::cout << req.realside << '\n';
-for (auto s : req.white_piece_types)
-    std::cout << s << ' ';
-
-for (auto s : req.black_piece_types)
-    std::cout << s << ' ';
-for (auto s : req.white_piece_squares)
-    std::cout << s << ' ';
-
-for (auto s : req.black_piece_squares)
-    std::cout << s << ' ';
-
   int dtm = _tb_probe(req);
   auto [ply, res] = unpackdist(dtm);
 
