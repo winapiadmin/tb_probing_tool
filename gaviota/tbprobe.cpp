@@ -1642,7 +1642,8 @@ std::vector<uint8_t> decompress(const std::vector<uint8_t> &compressed_data,
                                 size_t uncompressed_size) {
   lzma_stream strm = LZMA_STREAM_INIT;
   const uint64_t MAX_MEMLIMIT = 256ULL * 1024 * 1024;
-  uint64_t memlimit = std::min(static_cast<uint64_t>(uncompressed_size) * 4, MAX_MEMLIMIT);
+  uint64_t memlimit =
+      std::min(static_cast<uint64_t>(uncompressed_size) * 4, MAX_MEMLIMIT);
   if (lzma_alone_decoder(&strm, memlimit) != LZMA_OK) {
     throw std::runtime_error("Failed to initialize LZMA decoder");
   }
@@ -1715,7 +1716,8 @@ int PythonTablebase::_tb_probe(Request &req) {
       if (buffer_zipped.size() < 15)
         throw std::runtime_error("Invalid raw LZMA data");
       lzma_input.assign(buffer_zipped.begin() + 2, buffer_zipped.end());
-      // Parse and validate dictionary size from LZMA header (bytes 1-4 of LZMA header = bytes 3-6 of buffer_zipped)
+      // Parse and validate dictionary size from LZMA header (bytes 1-4 of LZMA
+      // header = bytes 3-6 of buffer_zipped)
       uint32_t dict_size = static_cast<uint32_t>(buffer_zipped[3]) |
                            (static_cast<uint32_t>(buffer_zipped[4]) << 8) |
                            (static_cast<uint32_t>(buffer_zipped[5]) << 16) |
