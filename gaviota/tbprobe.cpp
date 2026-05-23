@@ -1641,10 +1641,8 @@ static const char *lzma_ret_name(lzma_ret r) {
 std::vector<uint8_t> decompress(const std::vector<uint8_t> &compressed_data,
                                 size_t uncompressed_size) {
   lzma_stream strm = LZMA_STREAM_INIT;
-  const uint64_t MAX_MEMLIMIT = 256ULL * 1024 * 1024;
-  uint64_t memlimit =
-      std::min(static_cast<uint64_t>(uncompressed_size) * 4, MAX_MEMLIMIT);
-  if (lzma_alone_decoder(&strm, memlimit) != LZMA_OK) {
+  const uint64_t MEMLIMIT = 64ULL * 1024 * 1024;
+  if (lzma_alone_decoder(&strm, MEMLIMIT) != LZMA_OK) {
     throw std::runtime_error("Failed to initialize LZMA decoder");
   }
 
@@ -1698,8 +1696,13 @@ int PythonTablebase::_tb_probe(Request &req) {
     int block = egtb_block_getnumber(req, idx);
     int n = egtb_block_getsize(req, idx);
     int z = egtb_block_getsize_zipped(req.egkey, block);
+    if (z <= 0 || static_cast<size_t>(z) > static_cast<size_t>(n) * 16 + 4096)
+      throw std::runtime_error(
+          "Invalid compressed block size (" + std::to_string(z) + " bytes) "
+          "for egkey=" + req.egkey + " block=" + std::to_string(block) +
+          " (uncompressed=" + std::to_string(n) + ")");
     egtb_block_park(req.egkey, block, stream);
-    std::vector<uint8_t> buffer_zipped(z);
+    std::vector<uint8_t> buffer_zipped(static_cast<size_t>(z));
     stream->read(reinterpret_cast<char *>(buffer_zipped.data()), z);
     const std::streamsize bytes_read = stream->gcount();
     if (bytes_read != static_cast<std::streamsize>(z)) {
