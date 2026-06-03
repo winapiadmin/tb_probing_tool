@@ -1245,14 +1245,14 @@ int WdlTable::_probe_wdl_table(const chess::Board &board) {
     if (key_str != key) {
       cmirror = 8;
       mirror = 0x38;
-      bside = (board.sideToMove() == chess::WHITE) ? 1 : 0;
+      bside = (board.side_to_move() == chess::WHITE) ? 1 : 0;
     } else {
       cmirror = mirror = 0;
-      bside = (board.sideToMove() != chess::WHITE) ? 1 : 0;
+      bside = (board.side_to_move() != chess::WHITE) ? 1 : 0;
     }
   } else {
-    cmirror = (board.sideToMove() == chess::WHITE) ? 0 : 8;
-    mirror = (board.sideToMove() == chess::WHITE) ? 0 : 0x38;
+    cmirror = (board.side_to_move() == chess::WHITE) ? 0 : 8;
+    mirror = (board.side_to_move() == chess::WHITE) ? 0 : 0x38;
     bside = 0;
   }
 
@@ -1466,14 +1466,14 @@ std::pair<int, int> DtzTable::_probe_dtz_table(const chess::Board &board,
     if (key_str != key) {
       cmirror = 8;
       mirror = 0x38;
-      bside = (board.sideToMove() == chess::WHITE) ? 1 : 0;
+      bside = (board.side_to_move() == chess::WHITE) ? 1 : 0;
     } else {
       cmirror = mirror = 0;
-      bside = (board.sideToMove() != chess::WHITE) ? 1 : 0;
+      bside = (board.side_to_move() != chess::WHITE) ? 1 : 0;
     }
   } else {
-    cmirror = (board.sideToMove() == chess::WHITE) ? 0 : 8;
-    mirror = (board.sideToMove() == chess::WHITE) ? 0 : 0x38;
+    cmirror = (board.side_to_move() == chess::WHITE) ? 0 : 8;
+    mirror = (board.side_to_move() == chess::WHITE) ? 0 : 0x38;
     bside = 0;
   }
 
@@ -1721,7 +1721,7 @@ std::pair<int, int> Tablebase::probe_ab(chess::Board &board, int alpha,
   board.legals<chess::MoveGenType::CAPTURE>(legals);
   for (const auto &move : legals /*board.generate_legal_moves(0xffffffffffffffff, board.occupied_co[!board.turn])*/)
         {
-    if (move.typeOf() == EN_PASSANT) {
+    if (move.type_of() == EN_PASSANT) {
       continue;
     }
     board.doMove(move);
@@ -1754,7 +1754,7 @@ std::pair<int, int> Tablebase::probe_ab(chess::Board &board, int alpha,
 
 std::pair<int, int> Tablebase::sprobe_ab(chess::Board &board, int alpha,
                                          int beta, bool threats) {
-  if (popcount(board.occ(~board.sideToMove())) > 1) {
+  if (popcount(board.occ(~board.side_to_move())) > 1) {
     auto res = this->sprobe_capts(board, alpha, beta);
     bool captures_found = static_cast<bool>(res.second);
     if (captures_found) {
@@ -1858,7 +1858,7 @@ int Tablebase::probe_wdl(chess::Board &board) {
   Movelist legals;
   board.legals<chess::MoveGenType::PAWN | chess::MoveGenType::CAPTURE>(legals);
   for (const auto &move : legals) {
-    if (move.typeOf() != EN_PASSANT) {
+    if (move.type_of() != EN_PASSANT) {
       continue;
     }
     board.doMove(move);
@@ -1888,7 +1888,7 @@ int Tablebase::probe_wdl(chess::Board &board) {
       board.legals(legals2);
       all_ep =
           std::all_of(legals2.begin(), legals2.end(), [](const Move &move) {
-            return move.typeOf() == EN_PASSANT;
+            return move.type_of() == EN_PASSANT;
           });
       if (all_ep) {
         v = v1;
@@ -1930,7 +1930,7 @@ int Tablebase::probe_dtz_no_ep(chess::Board &board) {
     return 0;
   }
 
-  if (success == 2 || !(board.occ(board.sideToMove()) & ~board.pieces(PAWN))) {
+  if (success == 2 || !(board.occ(board.side_to_move()) & ~board.pieces(PAWN))) {
     return dtz_before_zeroing(wdl_val);
   }
 
@@ -2005,7 +2005,7 @@ int Tablebase::probe_dtz_no_ep(chess::Board &board) {
 
       try {
         int v;
-        if (board.halfmoveClock() == 0) {
+        if (board.rule50_count() == 0) {
           if (wdl_val == -2) {
             v = -1;
           } else {
@@ -2124,7 +2124,7 @@ int Tablebase::probe_dtz(chess::Board &board) {
   Movelist moves;
   board.legals(moves);
   for (const auto &move : moves) {
-    if (move.typeOf() != EN_PASSANT) {
+    if (move.type_of() != EN_PASSANT) {
       continue;
     }
     board.doMove(move);
@@ -2170,7 +2170,7 @@ int Tablebase::probe_dtz(chess::Board &board) {
       // micro-optimized:
       bool all_ep =
           std::all_of(moves2.begin(), moves2.end(), [](const Move &move) {
-            return move.typeOf() == EN_PASSANT;
+            return move.type_of() == EN_PASSANT;
           });
       if (all_ep) {
         v = v1;
