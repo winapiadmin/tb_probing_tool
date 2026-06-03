@@ -1384,7 +1384,7 @@ int PythonTablebase::probe_dtm(chess::Board &board) {
   chess::Movelist moves;
   board.legals<chess::MoveGenType::PAWN | chess::MoveGenType::CAPTURE>(moves);
   for (auto move : moves) {
-    if (move.typeOf() != chess::MoveType::EN_PASSANT)
+    if (move.type_of() != chess::MoveType::EN_PASSANT)
       continue;
     board.doMove(move);
     int child_dtm;
@@ -1423,7 +1423,7 @@ int PythonTablebase::_probe_dtm_no_ep(chess::Board &board) {
     black_squares.push_back(sq);
     black_types.push_back(board.at<chess::PieceType>(sq));
   }
-  int side = (board.sideToMove() == chess::WHITE) ? 0 : 1;
+  int side = (board.side_to_move() == chess::WHITE) ? 0 : 1;
   Request req(white_squares, white_types, black_squares, black_types, side);
   int dtm = _tb_probe(req);
   auto [ply, res] = unpackdist(dtm);
