@@ -1930,7 +1930,8 @@ int Tablebase::probe_dtz_no_ep(chess::Board &board) {
     return 0;
   }
 
-  if (success == 2 || !(board.occ(board.side_to_move()) & ~board.pieces(PAWN))) {
+  if (success == 2 ||
+      !(board.occ(board.side_to_move()) & ~board.pieces(PAWN))) {
     return dtz_before_zeroing(wdl_val);
   }
 
